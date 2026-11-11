@@ -96,4 +96,4 @@ types/          shared TypeScript types
 
 ## License
 
-Add a license before publishing (for example MIT). Until then, all rights reserved.
+MIT, see [LICENSE](./LICENSE).
