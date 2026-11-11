@@ -1,0 +1,308 @@
+/**
+ * API route for Unsads operations
+ * Handles GET (list) and POST (create) requests
+ *
+ * @author CKD
+ * @created 2026-01-23
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { supabaseAdmin } from '@/lib/supabase/server';
+import { validateUnsaid } from '@/lib/utils/content-validation';
+import {
+  checkDeviceRateLimit,
+  checkIPRateLimit,
+  checkTimeThrottle,
+} from '@/lib/utils/rate-limit';
+import { checkContentFilter } from '@/lib/utils/keyword-filter';
+import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
+import { roundCoordinate } from '@/lib/utils/location';
+import { clusterCellSize } from '@/lib/utils/clustering';
+import { CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocation';
+import crypto from 'crypto';
+
+/**
+ * GET /api/unsaids
+ * Fetch Unsads within viewport bounds or initial load
+ *
+ * @param {NextRequest} request - Next.js request object
+ * @returns {Promise<NextResponse>} JSON response with Unsads
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const bbox = searchParams.get('bbox'); // "minLng,minLat,maxLng,maxLat"
+    const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '200', 10) || 200, 1), 500);
+    const initial = searchParams.get('initial') === 'true';
+
+    let data;
+    let error;
+
+    // Zoomed out: return grid clusters computed in the database instead of up to 200 raw points
+    const zoom = parseFloat(searchParams.get('zoom') || '');
+    if (bbox && !initial && Number.isFinite(zoom) && zoom < CLUSTER_ZOOM_THRESHOLD) {
+      const box = bbox.split(',').map(Number);
+      if (box.length !== 4 || !box.every(Number.isFinite)) {
+        return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
+      }
+      const [minLng, minLat, maxLng, maxLat] = box;
+      const { data: rows, error: clusterError } = await supabaseAdmin.rpc('get_unsaid_clusters', {
+        min_lng: minLng,
+        min_lat: minLat,
+        max_lng: maxLng,
+        max_lat: maxLat,
+        cell_size: clusterCellSize(zoom),
+      });
+      if (clusterError) {
+        console.error('Error fetching clusters:', clusterError);
+        return NextResponse.json({ error: 'Failed to fetch clusters' }, { status: 500 });
+      }
+      const clusters = (rows || []).map((r) => ({
+        lat: r.lat,
+        lng: r.lng,
+        count: Number(r.count),
+        bounds: [[r.bounds_min_lat, r.bounds_min_lng], [r.bounds_max_lat, r.bounds_max_lng]],
+        sample: {
+          id: r.sample_id,
+          content: r.sample_content,
+          city: r.sample_city,
+          countryCode: r.sample_country_code,
+          location: { lat: r.lat, lng: r.lng },
+          createdAt: r.sample_created_at,
+        },
+      }));
+      // Cluster answers are the same for everyone looking at the same box, so let the CDN share them
+      return NextResponse.json({ clusters }, { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
+    }
+
+    if (bbox && !initial) {
+      // Viewport-based query using PostGIS RPC
+      const [minLng, minLat, maxLng, maxLat] = bbox.split(',').map(Number);
+      if (bbox.split(',').length !== 4 || ![minLng, minLat, maxLng, maxLat].every(Number.isFinite)) {
+        return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
+      }
+      const result = await supabaseAdmin.rpc('get_unsaids_in_bbox', {
+        min_lng: minLng,
+        min_lat: minLat,
+        max_lng: maxLng,
+        max_lat: maxLat,
+        result_limit: limit,
+      });
+      data = result.data;
+      error = result.error;
+    } else {
+      // Initial load - get most recent
+      const query = supabaseAdmin
+        .from('unsaids')
+        .select('id, content, city, country_code, location, created_at')
+        .eq('is_shadow_banned', false)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      const result = await query;
+      data = result.data;
+      error = result.error;
+    }
+
+    if (error) {
+      console.error('Error fetching unsaids:', error);
+      return NextResponse.json({ error: 'Failed to fetch unsaids' }, { status: 500 });
+    }
+
+    // Transform location from GeoJSON to lat/lng
+    const unsaids = (data || []).map((unsaid) => {
+      let location = { lat: 0, lng: 0 };
+      try {
+        // Parse GeoJSON (from ST_AsGeoJSON or already parsed)
+        const geoJson = typeof unsaid.location === 'string' ? JSON.parse(unsaid.location) : unsaid.location;
+        if (geoJson && geoJson.coordinates && Array.isArray(geoJson.coordinates)) {
+          location = {
+            lng: geoJson.coordinates[0],
+            lat: geoJson.coordinates[1],
+          };
+        }
+      } catch (e) {
+        console.error('Error parsing location:', e);
+      }
+
+      return {
+        id: unsaid.id,
+        content: unsaid.content,
+        city: unsaid.city,
+        countryCode: unsaid.country_code,
+        location,
+        createdAt: unsaid.created_at,
+      };
+    });
+
+    return NextResponse.json({ unsaids });
+  } catch (error) {
+    console.error('Unexpected error in GET /api/unsaids:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/unsaids
+ * Create a new Unsaid
+ *
+ * @param {NextRequest} request - Next.js request object
+ * @returns {Promise<NextResponse>} JSON response with created Unsaid
+ */
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { content, city, countryCode } = body;
+    const rawLocation = body.location;
+
+    // Hashed identifiers: raw device id / IP are never stored
+    const deviceId = hashDeviceId(body.deviceId);
+    if (!deviceId) {
+      return NextResponse.json({ error: 'Invalid device id' }, { status: 400 });
+    }
+    const ipAddress = hashRequestIp(request);
+
+    // Validate content
+    if (typeof content !== 'string') {
+      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+    }
+    const validation = validateUnsaid(content);
+    if (!validation.valid) {
+      return NextResponse.json({ error: validation.error }, { status: 400 });
+    }
+
+    // Check keyword filter
+    const filterCheck = checkContentFilter(content);
+    if (filterCheck.blocked) {
+      return NextResponse.json({ error: filterCheck.reason || 'Content not allowed' }, { status: 400 });
+    }
+
+    // Validate place data, then blur coordinates here so privacy does not depend on the client
+    const lat = rawLocation?.lat;
+    const lng = rawLocation?.lng;
+    if (
+      typeof lat !== 'number' || typeof lng !== 'number' ||
+      !Number.isFinite(lat) || !Number.isFinite(lng) ||
+      Math.abs(lat) > 90 || Math.abs(lng) > 180
+    ) {
+      return NextResponse.json({ error: 'Invalid location' }, { status: 400 });
+    }
+    if (typeof countryCode !== 'string' || !/^[A-Za-z]{2}$/.test(countryCode)) {
+      return NextResponse.json({ error: 'Invalid country code' }, { status: 400 });
+    }
+    if (city != null && (typeof city !== 'string' || city.length > 100)) {
+      return NextResponse.json({ error: 'Invalid city' }, { status: 400 });
+    }
+    const location = { lat: roundCoordinate(lat), lng: roundCoordinate(lng) };
+
+    // Check rate limits
+    const deviceLimit = await checkDeviceRateLimit(deviceId, 'unsaid');
+    if (!deviceLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          remaining: deviceLimit.remaining,
+          resetAt: deviceLimit.resetAt,
+        },
+        { status: 429 }
+      );
+    }
+
+    const ipLimit = await checkIPRateLimit(ipAddress, 'unsaid');
+    if (!ipLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Rate limit exceeded',
+          remaining: ipLimit.remaining,
+        },
+        { status: 429 }
+      );
+    }
+
+    const timeThrottle = await checkTimeThrottle(deviceId, 'unsaid');
+    if (!timeThrottle.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Please wait before posting again',
+          waitSeconds: timeThrottle.waitSeconds,
+        },
+        { status: 429 }
+      );
+    }
+
+    // Generate content hash for duplicate detection
+    const contentHash = crypto.createHash('md5').update(content.toLowerCase().trim()).digest('hex');
+
+    // Check for duplicate content (same hash in last hour)
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    const { data: duplicates } = await supabaseAdmin
+      .from('unsaids')
+      .select('id')
+      .eq('content_hash', contentHash)
+      .gte('created_at', oneHourAgo)
+      .limit(5);
+
+    if (duplicates && duplicates.length >= 5) {
+      return NextResponse.json(
+        { error: 'Similar content was recently posted' },
+        { status: 400 }
+      );
+    }
+
+    // Insert Unsaid using RPC function for PostGIS
+    const { data: unsaidData, error: insertError } = await supabaseAdmin.rpc(
+      'create_unsaid_with_location',
+      {
+        p_content: content.trim(),
+        p_content_hash: contentHash,
+        p_city: city || null,
+        p_country_code: countryCode.toUpperCase(),
+        p_lng: location.lng,
+        p_lat: location.lat,
+        p_device_id: deviceId,
+        p_ip_address: ipAddress,
+      }
+    );
+
+    const unsaid = unsaidData && unsaidData.length > 0 ? unsaidData[0] : null;
+
+    if (insertError || !unsaid) {
+      console.error('Error creating unsaid:', insertError);
+      return NextResponse.json({ error: 'Failed to create unsaid' }, { status: 500 });
+    }
+
+
+    // Transform response location
+    let responseLocation = { lat: location.lat, lng: location.lng };
+    if (unsaid && unsaid.location) {
+      try {
+        const geoJson = typeof unsaid.location === 'string' ? JSON.parse(unsaid.location) : unsaid.location;
+        if (geoJson && geoJson.coordinates && Array.isArray(geoJson.coordinates)) {
+          responseLocation = {
+            lng: geoJson.coordinates[0],
+            lat: geoJson.coordinates[1],
+          };
+        }
+      } catch {
+        // Use provided location as fallback
+      }
+    }
+
+    return NextResponse.json(
+      {
+        unsaid: {
+          id: unsaid.id,
+          content: unsaid.content,
+          city: unsaid.city,
+          countryCode: unsaid.country_code,
+          location: responseLocation,
+          createdAt: unsaid.created_at,
+        },
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Unexpected error in POST /api/unsaids:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
