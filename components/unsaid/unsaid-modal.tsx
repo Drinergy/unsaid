@@ -209,7 +209,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
   if (loading) {
     return (
-      <SheetModal title="Thread" onClose={onClose}>
+      <SheetModal title="Thought" onClose={onClose}>
         <div className="px-5 pb-8 pt-4" role="status" aria-label="Loading thought">
           <div className="flex gap-3">
             <div className="skeleton w-8 h-8 rounded-full" />
@@ -226,7 +226,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
   if (error || !unsaid) {
     return (
-      <SheetModal title="Thread" onClose={onClose}>
+      <SheetModal title="Thought" onClose={onClose}>
         <p className="px-5 pb-8 pt-2 text-red-400">{error || 'This thought is no longer available.'}</p>
       </SheetModal>
     );
@@ -270,7 +270,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
   );
 
   return (
-    <SheetModal title="Thread" onClose={onClose} actions={menu}>
+    <SheetModal title="Thought" onClose={onClose} actions={menu}>
       <div className="flex-1 overflow-y-auto scrollbar-dark px-5 pt-2">
         {/* The thought */}
         <article className="relative pb-4" style={{ paddingLeft: 44 }}>
