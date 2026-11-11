@@ -209,7 +209,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
   if (loading) {
     return (
-      <SheetModal title="Thread" onClose={onClose}>
+      <SheetModal title="Thought" onClose={onClose}>
         <div className="px-5 pb-8 pt-4" role="status" aria-label="Loading thought">
           <div className="flex gap-3">
             <div className="skeleton w-8 h-8 rounded-full" />
@@ -226,7 +226,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
   if (error || !unsaid) {
     return (
-      <SheetModal title="Thread" onClose={onClose}>
+      <SheetModal title="Thought" onClose={onClose}>
         <p className="px-5 pb-8 pt-2 text-red-400">{error || 'This thought is no longer available.'}</p>
       </SheetModal>
     );
@@ -270,7 +270,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
   );
 
   return (
-    <SheetModal title="Thread" onClose={onClose} actions={menu}>
+    <SheetModal title="Thought" onClose={onClose} actions={menu}>
       <div className="flex-1 overflow-y-auto scrollbar-dark px-5 pt-2">
         {/* The thought */}
         <article className="relative pb-4" style={{ paddingLeft: 44 }}>
@@ -280,7 +280,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
             <span className="font-semibold text-gray-100">Anonymous</span>
             <span className="text-gray-400">{placeLine} · {timeAgo(unsaid.createdAt)}</span>
           </div>
-          <p className="mt-1 text-[17px] leading-relaxed text-gray-100 whitespace-pre-wrap">{unsaid.content}</p>
+          <p className="mt-1 font-serif text-[20px] leading-[1.55] text-gray-100 whitespace-pre-wrap">{unsaid.content}</p>
 
           <div className="-ml-2 mt-2 flex items-center gap-1">
             <ReactionButton value={reaction} counts={reactionCounts} onChange={handleReaction} />
