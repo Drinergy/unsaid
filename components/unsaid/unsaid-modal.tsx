@@ -280,7 +280,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
             <span className="font-semibold text-gray-100">Anonymous</span>
             <span className="text-gray-400">{placeLine} · {timeAgo(unsaid.createdAt)}</span>
           </div>
-          <p className="mt-1 text-[17px] leading-relaxed text-gray-100 whitespace-pre-wrap">{unsaid.content}</p>
+          <p className="mt-1 font-serif text-[20px] leading-[1.55] text-gray-100 whitespace-pre-wrap">{unsaid.content}</p>
 
           <div className="-ml-2 mt-2 flex items-center gap-1">
             <ReactionButton value={reaction} counts={reactionCounts} onChange={handleReaction} />

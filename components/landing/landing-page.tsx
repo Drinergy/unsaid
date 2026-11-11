@@ -109,17 +109,17 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
         {/* Logo/Title */}
-        <h1 className="text-5xl md:text-6xl font-light text-gray-100 mb-6 tracking-tight">
+        <h1 className="font-serif text-6xl md:text-8xl font-light text-gray-100 mb-5 tracking-[-0.03em] leading-none">
           Unsaid
         </h1>
 
         {/* Tagline */}
-        <p className="text-xl md:text-2xl text-gray-400 mb-4 font-light">
+        <p className="font-serif italic text-2xl md:text-3xl text-[rgb(255,214,170)]/80 mb-8 font-light">
           Thoughts left unspoken
         </p>
 
         {/* Description */}
-        <p className="text-base md:text-lg text-gray-500 mb-12 max-w-lg mx-auto">
+        <p className="text-base md:text-[17px] leading-relaxed text-gray-400 mb-12 max-w-md mx-auto">
           Share what you never said. Discover what others kept silent.
           Connect through the thoughts we all carry but never speak.
         </p>
@@ -158,12 +158,12 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
         )}
 
         {/* Privacy note */}
-        <p className="text-xs text-gray-600 mt-8">
+        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mt-10">
           Anonymous • Privacy-first • No accounts required
         </p>
 
         {/* Location privacy note */}
-        <p className="text-xs text-gray-700 mt-2">
+        <p className="text-xs text-gray-600 mt-3">
           Location is blurred to ~100m for your privacy
         </p>
       </div>
