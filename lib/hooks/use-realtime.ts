@@ -2,14 +2,14 @@
  * React hook for Supabase Realtime subscriptions
  * Handles new Unsads and replies within viewport bounds
  *
- * Realtime sends the PostGIS location as a raw hex string, not GeoJSON, so for a new
- * Unsaid we only use the id from the event and fetch the full record from the API.
+ * For a new Unsaid the event only tells us where it is and its id (and not everything the screen
+ * needs), so we fetch the full record from the API, and only if it is near the view.
  */
 
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { Unsaid, Reply } from '@/types/unsaid';
-import { parsePointHex } from '@/lib/utils/ewkb';
+import { parseRealtimePoint } from '@/lib/utils/ewkb';
 import { pointInBounds, RENDER_PAD } from '@/lib/utils/bounds';
 
 interface UseRealtimeOptions {
@@ -52,7 +52,7 @@ export function useRealtime(options: UseRealtimeOptions) {
             // thousands of open browsers do not all fetch every new post. (If the location cannot
             // be read, fall back to fetching.)
             const bounds = optionsRef.current.viewportBounds;
-            const point = parsePointHex(payload.new.location);
+            const point = parseRealtimePoint(payload.new.location);
             if (point && bounds && !pointInBounds(point, bounds, RENDER_PAD)) return;
 
             try {

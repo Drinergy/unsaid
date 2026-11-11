@@ -1,127 +1,99 @@
 # Unsaid
 
-A privacy-first web app where people anonymously share unsaid thoughts on a dark world map.
+**Say the thing you never said, to no one in particular.**
+
+Unsaid is an anonymous web app where people leave short thoughts on a dark world map. There are no accounts and no profiles. A thought is a small glowing light at a place on Earth; anyone can open it, react, or reply in a Threads-style thread.
 
 ## Features
 
-- **Anonymous posting**: no accounts; each browser gets a random device ID
-- **Dark world map**: Leaflet with MapTiler dark tiles, thoughts shown as soft glowing lights
-- **Threaded replies**: nested up to 5 levels deep
-- **Realtime**: new thoughts and replies appear live
-- **Privacy**: location is blurred to about 100m on the server; IP and device ID are stored only as keyed hashes
-- **Abuse control**: rate limits, link/email filter, duplicate check, community reports
+- **Anonymous by design**: no sign-up. Each browser gets a random device ID; the server stores only keyed hashes of it and of the IP.
+- **Dark world map**: Leaflet with MapTiler dark tiles. Thoughts glow softly and cluster when you zoom out; only what is in view is loaded (clustering is done in the database).
+- **Threaded replies**: nested up to 5 levels. Replies show the replier's city and country, never coordinates.
+- **Reactions**: four reaction types, one per device per thought.
+- **Realtime**: new thoughts and replies appear live, only if they are in your view.
+- **Location privacy**: coordinates are rounded to about 100 m **on the server**, whatever the client sends.
+- **Abuse control**: rate limits, link/email filter, duplicate check, and community reports (3 reports from different IPs hide a post).
+- **Extras**: saved thoughts, a daily thought, a "my location" button, keyboard shortcuts.
 
 ## Tech stack
 
-- Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS
-- Leaflet + react-leaflet, MapTiler tiles
-- Supabase: Postgres + PostGIS, Realtime
-- Vitest for unit tests
-- Vercel for deployment
+Next.js 16 (App Router, TypeScript), React 19, Tailwind CSS, Leaflet / react-leaflet, MapTiler tiles, Supabase (Postgres + PostGIS, Realtime), Vitest. Deployed on Vercel.
 
 ## Getting started
 
-**Prerequisites:** Node.js 20+, a Supabase project, a free [MapTiler](https://cloud.maptiler.com) API key.
+You need Node.js 20+, a [Supabase](https://supabase.com) project, and a free [MapTiler](https://cloud.maptiler.com) key.
 
-1. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+cp .env.local.example .env.local   # then fill it in
+npm run dev                        # http://localhost:3000
+```
 
-2. Create `.env.local` from the example and fill it in:
-   ```bash
-   cp .env.local.example .env.local
-   ```
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_publishable_key
-   SUPABASE_SERVICE_ROLE_KEY=your_supabase_secret_key
-   NEXT_PUBLIC_MAPTILER_KEY=your_maptiler_key
-   ID_HASH_SECRET=any_long_random_string   # openssl rand -hex 32
-   NEXT_PUBLIC_APP_URL=http://localhost:3000
-   ```
-   The service key and `ID_HASH_SECRET` are server-only: never expose them or commit `.env.local`.
+### Environment variables
 
-3. Set up the database (details in [MIGRATIONS.md](./MIGRATIONS.md)). In the Supabase SQL Editor run, in order:
-   - `supabase/migrations/001_initial_schema.sql`
-   - `supabase/migrations/003_spatial_functions.sql`
-   - `supabase/migrations/004_security_hardening.sql`
-   - `supabase/migrations/005_cluster_function.sql`
-   - `supabase/migrations/006_reactions.sql`
-   - `supabase/migrations/007_reaction_types.sql`
-   - `supabase/migrations/008_reply_location.sql`
-   - `supabase/migrations/009_report_ips_and_reply_depth.sql`
+| Variable | Where | Notes |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | public | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public | Publishable (anon) key |
+| `SUPABASE_SERVICE_ROLE_KEY` | **server only** | Secret key. Never expose it |
+| `ID_HASH_SECRET` | **server only** | Long random string (`openssl rand -hex 32`). Changing it breaks rate-limit history |
+| `NEXT_PUBLIC_MAPTILER_KEY` | public | Restrict it to your domain in MapTiler |
+| `NEXT_PUBLIC_APP_URL` | public | `http://localhost:3000` locally |
 
-   (There is no `002`: it was removed.) Then enable realtime:
-   ```sql
-   alter publication supabase_realtime add table unsaids, replies;
-   ```
+### Database
 
-4. Run the app:
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000).
+In the Supabase SQL editor, run the files in `supabase/migrations/` in this order (there is no `002`):
 
-More help: [SETUP.md](./SETUP.md), [TROUBLESHOOTING.md](./TROUBLESHOOTING.md), [DEPLOYMENT.md](./DEPLOYMENT.md).
+`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth`
+
+Then turn on realtime:
+
+```sql
+alter publication supabase_realtime add table unsaids, replies;
+```
 
 ## Scripts
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Start the dev server |
+| `npm run dev` | Dev server |
 | `npm run build` | Production build |
-| `npm test` | Run unit tests (Vitest) |
+| `npm test` | Unit tests (Vitest) |
 | `npm run type-check` | TypeScript check |
 | `npm run lint` | ESLint |
 
 ## Project structure
 
 ```
-unsaid/
-├── app/              # Next.js App Router
-│   ├── api/          # API routes: unsaids, replies, reports
-│   ├── page.tsx      # Main page
-│   └── layout.tsx
-├── components/       # React components (map, unsaid, landing, ui)
-├── lib/
-│   ├── supabase/     # Supabase clients (browser and server)
-│   ├── hooks/        # React hooks (realtime, geolocation, state)
-│   └── utils/        # Rate limit, filters, validation, hashing
-├── types/            # TypeScript types
-├── public/sw.js      # Clears the old offline cache and removes itself (no service worker is registered now)
-└── supabase/         # Database migrations
+app/            Next.js routes and API (unsaids, replies, reactions, reports)
+components/     map, unsaid (thread, forms, reactions), landing, saved thoughts, ui
+lib/            hooks, supabase clients, utils (hashing, rate limits, clustering, filters)
+supabase/       SQL migrations
+types/          shared TypeScript types
 ```
 
-## How it works
+## How privacy and safety work
 
-### Anonymous identity
-- Device ID is a UUID in localStorage; no accounts.
-- The server hashes the device ID and the caller's IP with `ID_HASH_SECRET` before storing them.
+- **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
+- **Writes**: the public key cannot write. Row-level security has no write policies; every write goes through the API using the server-only service key.
+- **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
+- **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
+- **Client IP** comes from platform headers (`x-vercel-forwarded-for`, `x-real-ip`) or the last `x-forwarded-for` hop. In `next dev` there is no proxy, so everyone shares one IP.
 
-### Location privacy
-- Coordinates are rounded to about 100m **on the server**, whatever the client sends.
-- City and country come from reverse geocoding (OpenStreetMap Nominatim); IP lookup is the fallback if location is denied.
-- Replies show the replier's city and country too (never coordinates); it is optional and unverified, like a thought's place.
+## Deploying
 
-### Rate limiting
-- 10 thoughts per 24 hours per device, 50 replies per 24 hours per device
-- 20 posts per hour per IP
-- 30 seconds minimum between posts
-- Counted from the posts themselves (rolling windows); a failed check blocks the request.
-
-### Moderation
-- Links and email addresses are blocked.
-- One report per device per post; **3 reports from different devices** hide a post (shadow ban).
-- All database writes go through the API; direct writes with the public key are blocked.
-
-## Deployment
-
-1. Push to GitHub and import the project in Vercel.
-2. Add all environment variables above (including `ID_HASH_SECRET`).
-3. In MapTiler, restrict the key's allowed origins to your domain.
+1. Push to GitHub and import the repo in Vercel.
+2. Add the environment variables above.
+3. Restrict the MapTiler key to your domain.
 4. Deploy.
+
+## Troubleshooting
+
+- **Blank or grey map**: `NEXT_PUBLIC_MAPTILER_KEY` is missing or restricted to another domain.
+- **Writes fail**: check `SUPABASE_SERVICE_ROLE_KEY` and `ID_HASH_SECRET` are set.
+- **No live updates**: run the realtime `alter publication` statement above.
+- **Blocked when testing locally**: the 30 s throttle and daily limits apply to you too.
 
 ## License
 
-Private project - All rights reserved
+Add a license before publishing (for example MIT). Until then, all rights reserved.

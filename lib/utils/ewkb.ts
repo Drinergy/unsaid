@@ -1,8 +1,32 @@
 /**
- * Reads a point from a hex EWKB string. This is how a PostGIS geometry column arrives in a
- * Realtime event (not as GeoJSON), so it lets the browser decide if a new thought is in view
- * before asking the API for it.
+ * Reads a point out of a Realtime event's `location`, so the browser can decide if a new thought
+ * is in view before asking the API for it. Supabase sends a PostGIS point as a GeoJSON object
+ * (`{ type: 'Point', coordinates: [lng, lat] }`); a hex EWKB string is also understood, in case
+ * the format differs between versions or setups. Returns null when it is neither.
  */
+export function parseRealtimePoint(value: unknown): { lng: number; lat: number } | null {
+  if (value && typeof value === 'object') {
+    const coords = (value as { coordinates?: unknown }).coordinates;
+    if (Array.isArray(coords) && coords.length >= 2) {
+      const [lng, lat] = coords;
+      return typeof lng === 'number' && typeof lat === 'number' && Number.isFinite(lng) && Number.isFinite(lat) ? { lng, lat } : null;
+    }
+    return null;
+  }
+  if (typeof value === 'string') {
+    if (value.trim().startsWith('{')) {
+      try {
+        return parseRealtimePoint(JSON.parse(value));
+      } catch {
+        return null;
+      }
+    }
+    return parsePointHex(value);
+  }
+  return null;
+}
+
+/** Reads a point from a hex EWKB string (how PostGIS writes a geometry column as text). */
 export function parsePointHex(hex: unknown): { lng: number; lat: number } | null {
   if (typeof hex !== 'string' || hex.length < 42 || hex.length % 2 !== 0 || /[^0-9a-f]/i.test(hex)) return null;
 

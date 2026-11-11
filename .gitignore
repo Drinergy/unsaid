@@ -34,3 +34,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local AI tooling (not part of the project)
+AGENTS.md
+CLAUDE.md
+.claude/
+docs/agents/
+.scratch/

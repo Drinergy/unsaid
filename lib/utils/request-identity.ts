@@ -19,10 +19,23 @@ export function hashDeviceId(deviceId: unknown): string | null {
   return typeof deviceId === 'string' && UUID_RE.test(deviceId) ? hash(deviceId.toLowerCase()) : null;
 }
 
+/**
+ * The caller's IP, from a header the client cannot choose.
+ *
+ *  1. Headers the hosting platform sets itself (Vercel overwrites these; a client's own value is dropped).
+ *  2. Otherwise the LAST x-forwarded-for entry: that is the one our own proxy appended. The first
+ *     entry is whatever the client typed, so it must never be used.
+ *
+ * With no proxy at all (for example `next dev`) there is no trustworthy IP, so everyone shares "unknown".
+ */
+export function getClientIp(request: NextRequest): string {
+  const platform = request.headers.get('x-vercel-forwarded-for') || request.headers.get('x-real-ip');
+  if (platform) return platform.split(',')[0].trim();
+
+  const hops = request.headers.get('x-forwarded-for')?.split(',').map((h) => h.trim()).filter(Boolean);
+  return hops?.[hops.length - 1] ?? 'unknown';
+}
+
 export function hashRequestIp(request: NextRequest): string {
-  const ip =
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
-    request.headers.get('x-real-ip') ||
-    'unknown';
-  return hash(ip);
+  return hash(getClientIp(request));
 }

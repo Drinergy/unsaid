@@ -96,3 +96,24 @@ describe('reply depth (reply-depth.ts)', () => {
     expect(isReplyDepthAllowed(nextReplyDepth(5))).toBe(false); // reply to a depth-5 reply
   });
 });
+
+describe('client IP (request-identity.ts)', () => {
+  const req = (headers: Record<string, string>) => new NextRequest('http://localhost/api/x', { headers });
+
+  it('ignores a made-up x-forwarded-for when the platform sets its own header', async () => {
+    const { getClientIp } = await import('../request-identity');
+    expect(getClientIp(req({ 'x-vercel-forwarded-for': '203.0.113.7', 'x-forwarded-for': '1.2.3.4' }))).toBe('203.0.113.7');
+    expect(getClientIp(req({ 'x-real-ip': '203.0.113.8', 'x-forwarded-for': '1.2.3.4' }))).toBe('203.0.113.8');
+  });
+
+  it('otherwise uses the LAST forwarded entry (added by our proxy), never the first (typed by the client)', async () => {
+    const { getClientIp } = await import('../request-identity');
+    expect(getClientIp(req({ 'x-forwarded-for': '6.6.6.6, 203.0.113.9' }))).toBe('203.0.113.9');
+  });
+
+  it('has no trustworthy IP without any proxy header', async () => {
+    const { getClientIp } = await import('../request-identity');
+    expect(getClientIp(req({}))).toBe('unknown');
+  });
+});
+

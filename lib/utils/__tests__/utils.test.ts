@@ -217,3 +217,20 @@ describe('buildReplyTree', () => {
     expect(tree[0].replies!.map((r) => r.id)).toEqual(['b']);
   });
 });
+
+describe('parseRealtimePoint (what a Realtime event really carries)', () => {
+  it('reads the GeoJSON object Supabase sends, as seen in a real event', async () => {
+    const { parseRealtimePoint } = await import('../ewkb');
+    const event = { crs: { type: 'name', properties: { name: 'EPSG:4326' } }, type: 'Point', coordinates: [13.4, 52.52] };
+    expect(parseRealtimePoint(event)).toEqual({ lng: 13.4, lat: 52.52 });
+    expect(parseRealtimePoint(JSON.stringify(event))).toEqual({ lng: 13.4, lat: 52.52 });
+  });
+
+  it('still reads a hex EWKB string, and gives up on anything else', async () => {
+    const { parseRealtimePoint } = await import('../ewkb');
+    expect(parseRealtimePoint('0101000020E6100000000000000000F03F0000000000000040')).toEqual({ lng: 1, lat: 2 });
+    expect(parseRealtimePoint(undefined)).toBeNull();
+    expect(parseRealtimePoint({ type: 'Point', coordinates: ['a', 'b'] })).toBeNull();
+    expect(parseRealtimePoint('not a point')).toBeNull();
+  });
+});
