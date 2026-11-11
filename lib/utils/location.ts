@@ -9,7 +9,6 @@
 
 import {
   BLUR_PRECISION_MULTIPLIER,
-  BLUR_RADIUS_METERS,
   GEOLOCATION_TIMEOUT_MS,
   GEOLOCATION_MAX_AGE_MS,
   IP_GEOLOCATION_API,
@@ -44,7 +43,7 @@ export function roundCoordinate(coord: number): number {
  * @param {number} lng - Longitude
  * @returns {{ lat: number; lng: number }} Rounded coordinates
  */
-export function roundLocation(lat: number, lng: number): { lat: number; lng: number } {
+function roundLocation(lat: number, lng: number): { lat: number; lng: number } {
   return {
     lat: roundCoordinate(lat),
     lng: roundCoordinate(lng),
@@ -165,16 +164,13 @@ export async function getUserLocation(preferBrowser: boolean = false): Promise<{
           async (position) => {
             try {
               const { latitude, longitude } = position.coords;
-              console.log('Got precise location:', latitude, longitude);
               
               // Round to ~100m for anonymity (prevents doxxing)
               const rounded = roundLocation(latitude, longitude);
-              console.log(`Rounded location (~${BLUR_RADIUS_METERS}m blur):`, rounded);
               
               // Try to reverse geocode to get city/country
               try {
                 const reverseGeocoded = await reverseGeocode(rounded.lat, rounded.lng);
-                console.log('Reverse geocoded:', reverseGeocoded);
                 resolve({
                   lat: rounded.lat,
                   lng: rounded.lng,

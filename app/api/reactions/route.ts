@@ -6,10 +6,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { getReactionCounts, REACTION_TYPES } from '@/lib/utils/reaction-counts';
+import { allowBurst } from '@/lib/utils/burst-limit';
 import type { ReactionType } from '@/types/unsaid';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const NEW_REACTIONS_PER_HOUR_PER_IP = 60;
+// Every call (add, change or remove) counts here, so add/remove loops are slowed too
+const REACTION_CALLS_PER_MINUTE_PER_IP = 30;
 
 /**
  * POST /api/reactions
@@ -30,6 +33,10 @@ export async function POST(request: NextRequest) {
     }
     if (type !== null && !REACTION_TYPES.includes(type)) {
       return NextResponse.json({ error: 'Invalid reaction' }, { status: 400 });
+    }
+
+    if (!allowBurst(`reaction:${hashRequestIp(request)}`, REACTION_CALLS_PER_MINUTE_PER_IP, 60_000)) {
+      return NextResponse.json({ error: 'Too many reactions. Please slow down.' }, { status: 429 });
     }
 
     // Only visible thoughts can be reacted to
