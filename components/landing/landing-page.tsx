@@ -11,6 +11,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { useGeolocation, getDefaultLocation } from '@/lib/hooks/use-geolocation';
 import { ButtonLoading } from '@/components/ui/loading-spinner';
 
@@ -108,7 +109,8 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/20" />
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
-        {/* Logo/Title */}
+        {/* Logo/Title. The logo has a solid black background; a soft round mask hides the square over the map */}
+        <Image src="/logo.png" alt="" width={112} height={112} priority className="mx-auto mb-6 [mask-image:radial-gradient(circle,#000_64%,transparent_71%)]" />
         <h1 className="font-serif text-6xl md:text-8xl font-light text-gray-100 mb-5 tracking-[-0.03em] leading-none">
           Unsaid
         </h1>

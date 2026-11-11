@@ -11,7 +11,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 export const RATE_LIMITS = {
   UNSAID_PER_DAY: 10,
   REPLY_PER_DAY: 50,
-  UNSAID_PER_HOUR_IP: 20,
+  POSTS_PER_HOUR_IP: 20,
   MIN_SECONDS_BETWEEN_POSTS: 30,
 } as const;
 
@@ -60,7 +60,7 @@ export async function checkIPRateLimit(
   ipAddress: string,
   limitType: LimitType
 ): Promise<{ allowed: boolean; remaining?: number }> {
-  const limit = RATE_LIMITS.UNSAID_PER_HOUR_IP;
+  const limit = RATE_LIMITS.POSTS_PER_HOUR_IP;
   const count = await countSince(limitType, 'ip_address', ipAddress, new Date(Date.now() - 3_600_000));
   if (count === null) return { allowed: false };
 

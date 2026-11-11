@@ -136,6 +136,18 @@ export async function POST(request: NextRequest) {
     // Generate content hash
     const contentHash = crypto.createHash('md5').update(content.toLowerCase().trim()).digest('hex');
 
+    // The same text five times under one thought in an hour is spam
+    const { data: duplicates } = await supabaseAdmin
+      .from('replies')
+      .select('id')
+      .eq('unsaid_id', unsaidId)
+      .eq('content_hash', contentHash)
+      .gte('created_at', new Date(Date.now() - 3_600_000).toISOString())
+      .limit(5);
+    if (duplicates && duplicates.length >= 5) {
+      return NextResponse.json({ error: 'Similar reply was recently posted' }, { status: 400 });
+    }
+
     // Insert Reply
     const { data: reply, error: insertError } = await supabaseAdmin
       .from('replies')

@@ -45,13 +45,18 @@ export async function GET(request: NextRequest) {
       if (box.length !== 4 || !box.every(Number.isFinite)) {
         return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
       }
-      const [minLng, minLat, maxLng, maxLat] = box;
+      // Snap zoom and box edges so near-identical requests share one CDN entry (a caller cannot
+      // dodge the cache by changing the last decimal)
+      const snappedZoom = Math.round(zoom * 2) / 2;
+      const cell = clusterCellSize(snappedZoom);
+      const [minLng, minLat] = [box[0], box[1]].map((v) => Math.floor(v / cell) * cell);
+      const [maxLng, maxLat] = [box[2], box[3]].map((v) => Math.ceil(v / cell) * cell);
       const { data: rows, error: clusterError } = await supabaseAdmin.rpc('get_unsaid_clusters', {
         min_lng: minLng,
         min_lat: minLat,
         max_lng: maxLng,
         max_lat: maxLat,
-        cell_size: clusterCellSize(zoom),
+        cell_size: cell,
       });
       if (clusterError) {
         console.error('Error fetching clusters:', clusterError);

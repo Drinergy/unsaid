@@ -19,7 +19,7 @@ const MAX_LENGTH_REPLY = 500;
  * @param {number} maxLength - Maximum allowed length
  * @returns {{ valid: boolean; error?: string }}
  */
-export function validateLength(
+function validateLength(
   content: string,
   maxLength: number,
   minLength: number = 1
