@@ -44,7 +44,7 @@ npm run dev                        # http://localhost:3000
 
 In the Supabase SQL editor, run the files in `supabase/migrations/` in this order (there is no `002`):
 
-`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth`
+`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth` → `010_hide_private_columns`
 
 Then turn on realtime:
 
@@ -75,10 +75,13 @@ types/          shared TypeScript types
 ## How privacy and safety work
 
 - **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
+- **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP; migration 010).
 - **Writes**: the public key cannot write. Row-level security has no write policies; every write goes through the API using the server-only service key.
 - **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
 - **Client IP** comes from platform headers (`x-vercel-forwarded-for`, `x-real-ip`) or the last `x-forwarded-for` hop. In `next dev` there is no proxy, so everyone shares one IP.
+
+- **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. If the user denies location, the browser asks ipapi.co for an approximate place from their IP.
 
 ## Deploying
 
