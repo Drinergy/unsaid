@@ -38,7 +38,6 @@ function savePick(today: string, id: string): void {
 
 export default function DailyThoughtOverlay({ unsaids, onUnsaidClick }: DailyThoughtOverlayProps) {
   const [dailyThought, setDailyThought] = useState<Unsaid | null>(null);
-  const [isDismissed, setIsDismissed] = useState(false);
 
   useEffect(() => {
     if (unsaids.length === 0) return;
@@ -46,12 +45,6 @@ export default function DailyThoughtOverlay({ unsaids, onUnsaidClick }: DailyTho
     // and remembered. Re-running this effect when the list changes never swaps it.
     const today = new Date();
     const day = today.toDateString();
-    try {
-      setIsDismissed(localStorage.getItem(`daily_thought_dismissed_${day}`) === 'true');
-    } catch {
-      // storage blocked: show it
-    }
-
     const pickFromList = () => {
       // Simple hash-based selection: the date picks a position in the current list
       const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
@@ -91,38 +84,22 @@ export default function DailyThoughtOverlay({ unsaids, onUnsaidClick }: DailyTho
     };
   }, [unsaids]);
 
-  const handleDismiss = () => {
-    const today = new Date();
-    const dismissedKey = `daily_thought_dismissed_${today.toDateString()}`;
-    localStorage.setItem(dismissedKey, 'true');
-    setIsDismissed(true);
-  };
-
   const handleClick = () => {
     if (dailyThought) {
       onUnsaidClick(dailyThought);
     }
   };
 
-  if (!dailyThought || isDismissed) return null;
+  if (!dailyThought) return null;
 
   const preview = dailyThought.content.length > 100
     ? dailyThought.content.substring(0, 100) + '...'
     : dailyThought.content;
 
   return (
-    <div className="rise-in glass-card fixed bottom-6 left-4 right-24 sm:right-auto sm:left-6 sm:w-[26rem] z-[9999] rounded-2xl p-5">
-      <button
-        onClick={handleDismiss}
-        className="ctl absolute top-1 right-1 w-11 h-11 grid place-items-center rounded-full border border-transparent text-gray-400"
-        aria-label="Dismiss today's thought"
-      >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
+    <div className="rise-in glass-card fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 right-[5.25rem] sm:bottom-6 sm:right-auto sm:left-6 sm:w-[26rem] z-[9999] rounded-2xl p-3.5 sm:p-5">
       <p
-        className="text-gray-100 text-base leading-relaxed cursor-pointer pr-8 mb-4"
+        className="text-gray-100 text-sm sm:text-base leading-snug sm:leading-relaxed cursor-pointer pr-1 mb-2 sm:mb-4 line-clamp-3 sm:line-clamp-none"
         onClick={handleClick}
       >
         {preview}
@@ -133,7 +110,7 @@ export default function DailyThoughtOverlay({ unsaids, onUnsaidClick }: DailyTho
         </div>
         <button
           onClick={handleClick}
-          className="text-xs text-[rgb(255,214,170)] hover:text-white transition-colors whitespace-nowrap rounded px-1 -mx-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
+          className="text-xs text-[rgb(255,214,170)] hover:text-white transition-colors whitespace-nowrap rounded px-2 py-2 -my-2 -mx-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
         >
           Read more →
         </button>

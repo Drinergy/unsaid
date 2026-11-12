@@ -104,7 +104,7 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
   };
 
   return (
-    <div className="w-full h-screen bg-black/30 backdrop-blur-[2px] flex items-center justify-center relative overflow-hidden">
+    <div className="w-full h-dvh bg-black/30 backdrop-blur-[2px] flex items-center justify-center relative overflow-hidden">
       {/* Subtle overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/20" />
 

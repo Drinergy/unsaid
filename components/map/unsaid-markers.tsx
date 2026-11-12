@@ -8,8 +8,9 @@
 
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { CircleMarker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import type { LeafletMouseEvent, PathOptions } from 'leaflet';
 import L from 'leaflet';
 import type { Unsaid } from '@/types/unsaid';
 import LightAvatar from '@/components/unsaid/light-avatar';
@@ -17,6 +18,63 @@ import { NODE_OPEN_ZOOM, CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocat
 import { clusterRadius, getThoughtsBounds, groupByPixel, type Cluster } from '@/lib/utils/clustering';
 import { getOpacityByAge, getThoughtAge, timeAgo } from '@/lib/utils/thought-age';
 import type { ServerClusters } from './use-viewport-data';
+
+/** A finger needs about 44px; the glowing dots are only 8 to 12px wide. */
+const TOUCH_HIT_RADIUS = 22;
+
+function useCoarsePointer(): boolean {
+  const [coarse, setCoarse] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(pointer: coarse)');
+    const update = () => setCoarse(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return coarse;
+}
+
+/**
+ * One glowing dot. With a mouse it is the dot itself that reacts (with a hover tooltip). On a touch
+ * screen the dot is only drawn, and an invisible circle of finger size on top takes the tap (a
+ * hover tooltip makes no sense there, and the tap opens the thought anyway).
+ */
+function Dot({
+  center,
+  radius,
+  pathOptions,
+  onClick,
+  tooltip,
+  coarse,
+}: {
+  center: [number, number];
+  radius: number;
+  pathOptions: PathOptions;
+  onClick: (e: LeafletMouseEvent) => void;
+  tooltip: React.ReactNode;
+  coarse: boolean;
+}): React.ReactElement {
+  if (!coarse) {
+    return (
+      <CircleMarker center={center} radius={radius} pathOptions={pathOptions} eventHandlers={{ click: onClick }}>
+        <Tooltip permanent={false} direction="top" offset={[0, -10]} className="unsaid-tooltip" opacity={1}>
+          {tooltip}
+        </Tooltip>
+      </CircleMarker>
+    );
+  }
+  return (
+    <>
+      <CircleMarker center={center} radius={radius} pathOptions={{ ...pathOptions, interactive: false }} />
+      <CircleMarker
+        center={center}
+        radius={Math.max(radius, TOUCH_HIT_RADIUS)}
+        pathOptions={{ stroke: false, fill: true, fillOpacity: 0, className: 'unsaid-hit' }}
+        eventHandlers={{ click: onClick }}
+      />
+    </>
+  );
+}
 
 export default function UnsaidMarkers({
   unsaids,
@@ -28,6 +86,7 @@ export default function UnsaidMarkers({
   onUnsaidClick: (unsaid: Unsaid) => void;
 }): React.ReactElement {
   const map = useMap();
+  const coarse = useCoarsePointer();
 
   // Start from the map's real zoom (the default would briefly cluster a whole country into one dot)
   const [zoom, setZoom] = useState(() => map.getZoom());
@@ -102,8 +161,9 @@ export default function UnsaidMarkers({
     return (
       <>
         {clusters.map((cluster, index) => (
-          <CircleMarker
+          <Dot
             key={`cluster-${cluster.center.lat}-${cluster.center.lng}-${index}`}
+            coarse={coarse}
             center={[cluster.center.lat, cluster.center.lng]}
             radius={clusterRadius(cluster.count)}
             pathOptions={{
@@ -113,19 +173,10 @@ export default function UnsaidMarkers({
               fillColor: 'rgba(255, 214, 170, 0.9)',
               fillOpacity: 0.9,
             }}
-            eventHandlers={{
-              // A "cluster" of one is just a thought: zoom to it and open it, like in the close-up view
-              click: () => (cluster.count === 1 && cluster.thoughts[0] ? handleNodeClick(cluster.thoughts[0]) : handleClusterClick(cluster)),
-            }}
-          >
-            <Tooltip
-              permanent={false}
-              direction="top"
-              offset={[0, -10]}
-              className="unsaid-tooltip"
-              opacity={1}
-            >
-              {cluster.count === 1 ? (
+            // A "cluster" of one is just a thought: zoom to it and open it, like in the close-up view
+            onClick={() => (cluster.count === 1 && cluster.thoughts[0] ? handleNodeClick(cluster.thoughts[0]) : handleClusterClick(cluster))}
+            tooltip={
+              cluster.count === 1 ? (
                 <div>
                   {cluster.thoughts[0].content.length > 80
                     ? cluster.thoughts[0].content.slice(0, 80) + '...'
@@ -136,9 +187,9 @@ export default function UnsaidMarkers({
                   <span className="font-semibold">{cluster.count.toLocaleString()} thoughts</span>
                   <span className="text-gray-400"> · click to zoom in</span>
                 </div>
-              )}
-            </Tooltip>
-          </CircleMarker>
+              )
+            }
+          />
         ))}
       </>
     );
@@ -153,8 +204,9 @@ export default function UnsaidMarkers({
             lng: group.reduce((sum, t) => sum + t.location.lng, 0) / group.length,
           };
           return (
-            <CircleMarker
+            <Dot
               key={`group-${group.map((t) => t.id).join('-')}`}
+              coarse={coarse}
               center={[center.lat, center.lng]}
               radius={Math.min(7 + group.length, 16)}
               pathOptions={{
@@ -164,24 +216,21 @@ export default function UnsaidMarkers({
                 fillColor: 'rgba(255, 214, 170, 0.9)',
                 fillOpacity: 0.9,
               }}
-              eventHandlers={{
-                click: (e) => {
-                  e.target.closeTooltip(); // else the hover tooltip covers the popup
-                  setOpenGroup({
-                    center,
-                    thoughts: [...group].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
-                    zoom: effectiveZoom,
-                  });
-                },
+              onClick={(e) => {
+                e.target.closeTooltip?.(); // else the hover tooltip covers the popup
+                setOpenGroup({
+                  center,
+                  thoughts: [...group].sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+                  zoom: effectiveZoom,
+                });
               }}
-            >
-              <Tooltip permanent={false} direction="top" offset={[0, -10]} className="unsaid-tooltip" opacity={1}>
+              tooltip={
                 <div className="whitespace-nowrap">
                   <span className="font-semibold">{group.length} thoughts here</span>
                   <span className="text-gray-400"> · click to browse</span>
                 </div>
-              </Tooltip>
-            </CircleMarker>
+              }
+            />
           );
         }
 
@@ -193,8 +242,9 @@ export default function UnsaidMarkers({
           : unsaid.content;
 
         return (
-          <CircleMarker
+          <Dot
             key={unsaid.id}
+            coarse={coarse}
             center={[unsaid.location.lat, unsaid.location.lng]}
             radius={age.isRecent ? 5 : 4}
             pathOptions={{
@@ -204,20 +254,9 @@ export default function UnsaidMarkers({
               fillColor: `rgba(255, 214, 170, ${0.95 * opacity})`,
               fillOpacity: 0.95 * opacity,
             }}
-            eventHandlers={{
-              click: () => handleNodeClick(unsaid),
-            }}
-          >
-            <Tooltip
-              permanent={false}
-              direction="top"
-              offset={[0, -10]}
-              className="unsaid-tooltip"
-              opacity={1}
-            >
-              <div>{previewText}</div>
-            </Tooltip>
-          </CircleMarker>
+            onClick={() => handleNodeClick(unsaid)}
+            tooltip={<div>{previewText}</div>}
+          />
         );
       })}
 
