@@ -74,15 +74,20 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
     try {
       let final_location = location;
 
-      // Form submit is a user gesture, so browser geolocation can be asked now
-      if (!final_location || final_location.lat === 0 || final_location.lng === 0) {
+      // Form submit is a user gesture, so the device's own position can be asked now. A place we only
+      // guessed from the network (used to open the map) is not good enough to pin a thought to.
+      const hasPlace = (l: typeof final_location) => !!l && l.lat !== 0 && l.lng !== 0;
+      if (!hasPlace(final_location) || final_location?.approximate) {
         try {
           final_location = await requestLocation(true);
         } catch {
-          try {
-            final_location = await requestLocation(false);
-          } catch {
-            console.warn('All location methods failed');
+          // Refused or unavailable: keep the network guess if we have one, otherwise try once more without the device
+          if (!hasPlace(final_location)) {
+            try {
+              final_location = await requestLocation(false);
+            } catch {
+              console.warn('All location methods failed');
+            }
           }
         }
       }

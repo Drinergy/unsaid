@@ -1,31 +1,25 @@
 /**
- * Placeholder shown while the map code and the first tiles load.
- * Used by both the dynamic import fallback and the in-map overlay, so the
- * hand-off between the two looks like one continuous loading state.
+ * Shown while the map code and the first tiles load: the map's own sea colour (#141414), with soft rings
+ * spreading from a light in the middle, like a search. Plain on purpose: any picture of the world would
+ * not line up with the real tiles and would look like a different map popping in. Used by the page (while
+ * the place is found), the dynamic import fallback and the in-map overlay, so they look like one moment.
  */
 
 import React from 'react';
-
-const TILES = Array.from({ length: 24 });
+import { COPY } from '@/lib/copy';
 
 export default function MapSkeleton(): React.ReactElement {
   return (
-    <div
-      role="status"
-      aria-label="Loading map"
-      className="absolute inset-0 overflow-hidden bg-[#161616]"
-    >
-      {/* Faint grid of "tiles" that pulse, staggered, like a map being drawn in */}
-      <div className="absolute inset-0 grid grid-cols-6 grid-rows-4 gap-px">
-        {TILES.map((_, i) => (
-          <div
-            key={i}
-            className="bg-white/[0.08] motion-safe:animate-pulse"
-            style={{ animationDelay: `${(i % 6) * 120 + Math.floor(i / 6) * 160}ms` }}
-          />
-        ))}
-      </div>
-      <span className="sr-only">Loading map…</span>
+    <div role="status" aria-label={COPY.mapLoading} className="absolute inset-0 overflow-hidden bg-[#141414]">
+      {/* Rings spreading out from a light in the middle */}
+      <div className="search-ring" />
+      <div className="search-ring" style={{ animationDelay: '1.2s' }} />
+      <div className="search-ring" style={{ animationDelay: '2.4s' }} />
+      <span className="light-dot breathe absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" aria-hidden="true" />
+
+      <p className="absolute left-0 right-0 top-[calc(50%+3.5rem)] text-center text-sm text-gray-400 loading-caption">
+        {COPY.mapLoading}
+      </p>
     </div>
   );
 }

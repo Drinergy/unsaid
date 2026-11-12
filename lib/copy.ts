@@ -41,13 +41,12 @@ export const COPY = {
 
   // Landing
   landingBody: "Read what others could not say. Share yours when you're ready. You are not the only one carrying it.",
-  landingButton: 'Come in',
-  landingLocating: 'Finding your place…',
-  landingSkip: 'Skip, just show me the world',
+  landingDiscover: 'Discover thoughts',
   landingPromise: 'Anonymous. No account. No one will know it’s you.',
-  landingLocationNote: 'Your location is blurred to about 100 m.',
+  landingLocationNote: 'Your exact location is never shown.',
 
   // Map
+  mapLoading: 'Finding your place…',
   thoughtsHere: (n: number) => (n === 0 ? 'No thoughts here yet' : n === 1 ? '1 thought here' : `${n.toLocaleString()} thoughts here`),
   clusterHint: 'zoom in',
   groupHint: 'open to read',
@@ -60,7 +59,7 @@ export const COPY = {
   composerTitle: 'Write a thought',
   composerPlaceholder: 'What have you never said out loud?',
   composerAria: 'Your thought',
-  composerNote: 'Your location is blurred. No one will know it’s you.',
+  composerNote: 'Your exact location is never shown. No one will know it’s you.',
   shareButton: 'Share',
   sharing: 'Sharing…',
   replyPlaceholder: 'Reply with care…',

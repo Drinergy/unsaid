@@ -50,12 +50,16 @@ export default function LeafletMap({
   const hasUserLocation =
     initialCenter && initialCenter.lat !== DEFAULT_MAP_CENTER.lat && initialCenter.lng !== DEFAULT_MAP_CENTER.lng;
 
+  // The zoom to end at. With a known place the map starts from the whole world (the loading picture is the
+  // world too) and flies in once it is ready, so the hand-over feels like one move, not a jump to another map.
+  const targetZoom = initialZoom || (hasUserLocation ? USER_LOCATION_ZOOM : DEFAULT_ZOOM);
+  const startZoom = hasUserLocation ? DEFAULT_ZOOM : targetZoom;
+
   // Leaflet expects [lat, lng]
-  const defaultCenter = useMemo<LatLngExpression>(
-    () => (initialCenter ? [initialCenter.lat, initialCenter.lng] : [DEFAULT_MAP_CENTER.lat, DEFAULT_MAP_CENTER.lng]),
-    [initialCenter]
-  );
-  const defaultZoom = initialZoom || (hasUserLocation ? USER_LOCATION_ZOOM : DEFAULT_ZOOM);
+  const startCenter = useMemo<LatLngExpression>(() => {
+    const from = hasUserLocation || !initialCenter ? DEFAULT_MAP_CENTER : initialCenter;
+    return [from.lat, from.lng];
+  }, [hasUserLocation, initialCenter]);
 
   // One key per mount so the map container is never reused
   const mapKey = useId();
@@ -86,8 +90,8 @@ export default function LeafletMap({
     <div className="relative w-full h-full">
       <MapContainer
         key={mapKey}
-        center={defaultCenter}
-        zoom={defaultZoom}
+        center={startCenter}
+        zoom={startZoom}
         minZoom={2}
         className="w-full h-full"
         worldCopyJump
@@ -114,7 +118,7 @@ export default function LeafletMap({
         )}
 
         {/* FlyTo user location with smooth animation */}
-        {initialCenter && <FlyToLocation center={initialCenter} zoom={defaultZoom} animate={!!hasUserLocation} />}
+        {initialCenter && <FlyToLocation center={initialCenter} zoom={targetZoom} animate={!!hasUserLocation} enabled={ready} />}
 
         <MapControls userLocation={userLocation} />
 
