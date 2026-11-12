@@ -248,8 +248,8 @@ describe('content filter: links, contact details and spam', () => {
     'mail me at name (at) gmail',
     'call me 0917 123 4567 anytime',
     'dm me on telegram please',
-    'aaaaaaaaaaaaaaaaaaaa',
-    'buy buy buy buy buy buy now',
+    'a'.repeat(30),
+    'buy buy buy buy buy buy buy buy buy buy now',
   ])('blocks: %s', (text) => {
     expect(checkContentFilter(text).blocked).toBe(true);
   });
@@ -257,6 +257,10 @@ describe('content filter: links, contact details and spam', () => {
   it.each([
     "I'm scared that I'm becoming my mother.",
     'I never told her. Me too, honestly.',
+    'noooooooooooooooo please come back',
+    'I miss her................ so much',
+    'hmmmmmmmmmmmmmmmm',
+    'no no no no no no no, I just want her back',
     'I miss her.Me and her were close.',
     'It was 2019, then 2020, then she was gone.',
     'I wanted to say sorry... but I never did!!!',

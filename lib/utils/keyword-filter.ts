@@ -34,8 +34,9 @@ const CONTACT_PATTERNS: RegExp[] = [
 ];
 
 const SPAM_PATTERNS: RegExp[] = [
-  /(.)\1{14,}/, // the same character 15 times or more
-  /\b(\w+)(\s+\1\b){5,}/i, // the same word 6 times in a row
+  // Only what a bot does: people write "noooooooooooooooo" and "no no no no no no" when they hurt
+  /(.)\1{29,}/, // the same character 30 times or more
+  /\b(\w+)(\s+\1\b){9,}/i, // the same word 10 times in a row
 ];
 
 /**
