@@ -197,7 +197,7 @@ function FloatingActions({
           Larger screens: both stack at the bottom right. */}
       <button
         onClick={onSavedClick}
-        className="glass ctl fixed z-[10000] top-[4.5rem] right-3 sm:top-auto sm:bottom-[6.75rem] sm:right-8 rounded-full w-12 h-12 grid place-items-center"
+        className="glass ctl fixed z-[10000] top-[4.5rem] right-3 sm:top-auto sm:bottom-[6.75rem] sm:right-10 rounded-full w-12 h-12 grid place-items-center"
         aria-label={COPY.savedThoughts}
         title={`${COPY.savedThoughts} (Ctrl+S)`}
       >
