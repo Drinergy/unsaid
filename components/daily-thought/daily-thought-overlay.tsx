@@ -97,7 +97,7 @@ export default function DailyThoughtOverlay({ unsaids, onUnsaidClick }: DailyTho
     : dailyThought.content;
 
   return (
-    <div className="rise-in glass-card fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 right-[5.25rem] sm:bottom-6 sm:right-auto sm:left-6 sm:w-[26rem] z-[9999] rounded-2xl p-3.5 sm:p-5">
+    <div className="rise-in glass-card fixed bottom-[calc(0.75rem+env(safe-area-inset-bottom))] left-3 right-[5.25rem] sm:bottom-6 sm:right-auto sm:left-6 sm:w-[26rem] z-[9999] rounded-2xl p-3.5 sm:p-5">
       <p
         className="text-gray-100 text-sm sm:text-base leading-snug sm:leading-relaxed cursor-pointer pr-1 mb-2 sm:mb-4 line-clamp-3 sm:line-clamp-none"
         onClick={handleClick}
