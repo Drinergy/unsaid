@@ -294,3 +294,32 @@ describe('copy (copy.ts): one vocabulary, a kind voice', () => {
     }
   });
 });
+
+describe('scroll intent (scroll-intent.ts)', () => {
+  it('knows when the visitor wants to go down, and ignores jitter and upward moves', async () => {
+    const { wheelGoesDown, swipeGoesDown, keyGoesDown } = await import('../scroll-intent');
+    expect(wheelGoesDown(40)).toBe(true);
+    expect(wheelGoesDown(3)).toBe(false); // trackpad jitter
+    expect(wheelGoesDown(-40)).toBe(false); // scrolling up
+    expect(swipeGoesDown(600, 400)).toBe(true); // finger moved up
+    expect(swipeGoesDown(600, 580)).toBe(false); // too short
+    expect(swipeGoesDown(400, 600)).toBe(false); // finger moved down
+    expect(keyGoesDown('ArrowDown')).toBe(true);
+    expect(keyGoesDown(' ')).toBe(true);
+    expect(keyGoesDown('ArrowUp')).toBe(false);
+    expect(keyGoesDown('a')).toBe(false);
+  });
+});
+
+describe('saved place (cacheServes in location.ts)', () => {
+  it('lets a network guess answer a rough request, but never a request for the device position', async () => {
+    const { cacheServes } = await import('../location');
+    const guess = { approximate: true };
+    const exact = {};
+    expect(cacheServes(null, false)).toBe(false); // nothing saved
+    expect(cacheServes(guess, false)).toBe(true); // roughly where: fine
+    expect(cacheServes(guess, true)).toBe(false); // exact asked: do not hand back the guess
+    expect(cacheServes(exact, true)).toBe(true); // a real device position serves both
+    expect(cacheServes(exact, false)).toBe(true);
+  });
+});

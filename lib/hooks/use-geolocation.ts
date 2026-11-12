@@ -9,7 +9,7 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { getUserLocation } from '@/lib/utils/location';
+import { cacheServes, getUserLocation } from '@/lib/utils/location';
 import {
   GeoLocation,
   GeolocationState,
@@ -199,7 +199,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
 
     // Check cache first
     const cached = getCachedLocation();
-    if (cached) {
+    if (cached && cacheServes(cached, prefer_browser)) {
       setState((prev) => ({
         ...prev,
         location: cached,
@@ -221,6 +221,7 @@ export function useGeolocation(options: UseGeolocationOptions = {}): UseGeolocat
         city: raw_location.city,
         countryCode: raw_location.countryCode,
         isBlurred: true,
+        approximate: raw_location.approximate,
         timestamp: Date.now(),
       };
 

@@ -25,6 +25,7 @@ import { USER_LOCATION_ZOOM, DEFAULT_ZOOM } from '@/lib/constants/geolocation';
 import type { Unsaid } from '@/types/unsaid';
 import { COPY } from '@/lib/copy';
 import GentleNotice from '@/components/ui/gentle-notice';
+import MapSkeleton from '@/components/map/map-skeleton';
 import { announceShared } from '@/lib/utils/notices';
 
 /**
@@ -39,6 +40,9 @@ import { announceShared } from '@/lib/utils/notices';
 export default function Home(): React.ReactElement {
   // UI state
   const [show_map, setShowMap] = useState(false);
+  // The visitor moved on: the landing page slides away while the place is found and the map is made ready
+  const [entering, setEntering] = useState(false);
+  const [landing_gone, setLandingGone] = useState(false);
   const [show_create_form, setShowCreateForm] = useState(false);
   const [show_saved_thoughts, setShowSavedThoughts] = useState(false);
   const [user_location, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -77,6 +81,7 @@ export default function Home(): React.ReactElement {
    * Handle entering the map from landing page
    * Location is already detected by the landing page
    */
+  const handleEnterStart = useCallback((): void => setEntering(true), []);
   const handleEnterMap = useCallback((location: { lat: number; lng: number }): void => {
     setUserLocation(location);
     setShowMap(true);
@@ -126,10 +131,23 @@ export default function Home(): React.ReactElement {
         </div>
       )}
 
-      {/* Landing page overlay */}
-      {!show_map && (
-        <div className="absolute inset-0 z-10">
-          <LandingPage onEnterMap={handleEnterMap} />
+      {/* While the place is found and the map code loads, the same "looking for thoughts" picture the map
+          shows itself, so the hand-over looks like one loading moment */}
+      {entering && !show_map && (
+        <div className="absolute inset-0 z-[5]">
+          <MapSkeleton />
+        </div>
+      )}
+
+      {/* Landing page: slides up like the page scrolling away, then is removed */}
+      {!landing_gone && (
+        <div
+          className={`absolute inset-0 z-10 transition-transform duration-700 ease-[cubic-bezier(0.7,0,0.3,1)] ${entering ? '-translate-y-full' : ''}`}
+          onTransitionEnd={(e) => {
+            if (entering && e.target === e.currentTarget) setLandingGone(true);
+          }}
+        >
+          <LandingPage onEnterStart={handleEnterStart} onEnterMap={handleEnterMap} />
         </div>
       )}
 
@@ -197,7 +215,7 @@ function FloatingActions({
           Larger screens: both stack at the bottom right. */}
       <button
         onClick={onSavedClick}
-        className="glass ctl fixed z-[10000] top-[4.5rem] right-3 sm:top-auto sm:bottom-[6.75rem] sm:right-8 rounded-full w-12 h-12 grid place-items-center"
+        className="glass ctl fixed z-[10000] top-[4.5rem] right-3 sm:top-auto sm:bottom-[6.75rem] sm:right-10 rounded-full w-12 h-12 grid place-items-center"
         aria-label={COPY.savedThoughts}
         title={`${COPY.savedThoughts} (Ctrl+S)`}
       >
