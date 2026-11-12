@@ -18,6 +18,8 @@ import { useRealtime } from '@/lib/hooks/use-realtime';
 import { saveThought, removeSavedThought, isThoughtSaved } from '@/lib/utils/saved-thoughts';
 import { timeAgo } from '@/lib/utils/thought-age';
 import { buildReplyTree, buildThreadRows } from '@/lib/utils/thread-rows';
+import { announceShared } from '@/lib/utils/notices';
+import { COPY } from '@/lib/copy';
 
 interface UnsaidModalProps {
   unsaidId: string;
@@ -59,7 +61,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
   const fetchUnsaid = useCallback(async () => {
     try {
       const response = await fetch(`/api/unsaids/${unsaidId}?replies=${replyLimit}`, { headers: { 'x-device-id': getDeviceId() } });
-      if (!response.ok) throw new Error('Failed to fetch unsaid');
+      if (!response.ok) throw new Error(COPY.ourSide);
       const data = await response.json();
       setUnsaid(data.unsaid);
       setError(null);
@@ -69,7 +71,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
         if (data.unsaid.reactions?.counts) setReactionCounts(data.unsaid.reactions.counts);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : COPY.ourSide);
     } finally {
       setLoading(false);
     }
@@ -139,7 +141,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ unsaidId: unsaid.id, type: next, deviceId: getDeviceId() }),
         });
-        if (!response.ok) throw new Error('Failed to save reaction');
+        if (!response.ok) throw new Error(COPY.couldNotReact);
         const data = await response.json();
         setReactionCounts(data.counts);
         setReaction(data.mine);
@@ -169,10 +171,11 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
     });
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.error || 'Failed to create reply');
+      throw new Error(data.error || COPY.couldNotReply);
     }
     await fetchUnsaid();
     setReplyingTo(null);
+    announceShared('reply');
   };
 
   const sendReport = async (target: { unsaidId: string } | { replyId: string }) => {
@@ -181,7 +184,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...target, deviceId: getDeviceId() }),
     });
-    if (!response.ok) throw new Error('Failed to report');
+    if (!response.ok) throw new Error(COPY.couldNotReport);
   };
 
   const handleReport = async () => {
@@ -193,7 +196,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
       onClose();
     } catch (err) {
       console.error('Error reporting:', err);
-      alert('Failed to report. Please try again.');
+      alert(COPY.couldNotReport);
     }
   };
 
@@ -204,13 +207,13 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
       setHiddenReplyIds((ids) => new Set(ids).add(replyId));
     } catch (err) {
       console.error('Error reporting reply:', err);
-      alert('Failed to report. Please try again.');
+      alert(COPY.couldNotReport);
     }
   };
 
   if (loading) {
     return (
-      <SheetModal title="Thought" onClose={onClose}>
+      <SheetModal title={COPY.thoughtTitle} onClose={onClose}>
         <div className="px-5 pb-8 pt-4" role="status" aria-label="Loading thought">
           <div className="flex gap-3">
             <div className="skeleton w-8 h-8 rounded-full" />
@@ -227,7 +230,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
   if (error || !unsaid) {
     return (
-      <SheetModal title="Thought" onClose={onClose}>
+      <SheetModal title={COPY.thoughtTitle} onClose={onClose}>
         <p className="px-5 pb-8 pt-2 text-red-400">{error || 'This thought is no longer available.'}</p>
       </SheetModal>
     );
@@ -271,7 +274,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
   );
 
   return (
-    <SheetModal title="Thought" onClose={onClose} actions={menu}>
+    <SheetModal title={COPY.thoughtTitle} onClose={onClose} actions={menu}>
       <div className="flex-1 overflow-y-auto scrollbar-dark px-5 pt-2">
         {/* The thought */}
         <article className="relative pb-4" style={{ paddingLeft: 44 }}>
@@ -318,7 +321,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
 
         {/* Replies */}
         {total === 0 ? (
-          <p className="pb-6 pl-[44px] text-sm text-gray-500">No replies yet.</p>
+          <p className="pb-6 pl-[44px] text-sm text-gray-500">{COPY.noReplies}</p>
         ) : (
           rows.map((row) => (
             <ReplyThread

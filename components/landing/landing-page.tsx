@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useGeolocation, getDefaultLocation } from '@/lib/hooks/use-geolocation';
 import { ButtonLoading } from '@/components/ui/loading-spinner';
+import { COPY } from '@/lib/copy';
 
 interface LandingPageProps {
   /** Callback when user enters the map, receives detected location */
@@ -127,8 +128,7 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
 
         {/* Description */}
         <p className="text-base md:text-[17px] leading-relaxed text-gray-400 mb-12 max-w-md mx-auto">
-          Share what you never said. Discover what others kept silent.
-          Connect through the thoughts we all carry but never speak.
+          {COPY.landingBody}
         </p>
 
         {/* CTA Button with loading state */}
@@ -137,10 +137,10 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
             onClick={handleEnterMap}
             disabled={loading}
             className="ctl-primary h-14 min-w-[220px] rounded-full px-10 text-base font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-            aria-label={loading ? 'Detecting your location...' : 'Enter the map'}
+            aria-label={loading ? COPY.landingLocating : 'Enter the map'}
           >
-            <ButtonLoading loading={loading} loadingText="Locating...">
-              Discover Thoughts
+            <ButtonLoading loading={loading} loadingText={COPY.landingLocating}>
+              {COPY.landingButton}
             </ButtonLoading>
           </button>
 
@@ -152,7 +152,7 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
               className="text-sm text-gray-600 hover:text-gray-400 transition-colors"
               aria-label="Skip location detection and explore the world"
             >
-              Skip and explore world
+              {COPY.landingSkip}
             </button>
           )}
         </div>
@@ -165,13 +165,13 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
         )}
 
         {/* Privacy note */}
-        <p className="text-[11px] uppercase tracking-[0.18em] text-gray-500 mt-10">
-          Anonymous • Privacy-first • No accounts required
+        <p className="text-sm text-gray-400 mt-10">
+          {COPY.landingPromise}
         </p>
 
         {/* Location privacy note */}
-        <p className="text-xs text-gray-600 mt-3">
-          Location is blurred to ~100m for your privacy
+        <p className="text-xs text-gray-500 mt-2">
+          {COPY.landingLocationNote}
         </p>
       </div>
     </div>

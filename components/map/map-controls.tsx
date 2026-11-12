@@ -13,6 +13,7 @@ import { useMap } from 'react-leaflet';
 import { getCountryCode } from '@/lib/utils/location';
 import { decideLocationTarget, distanceKm, FAR_AWAY_KM } from '@/lib/utils/location-toggle';
 import { USER_LOCATION_ZOOM, ZOOM_LEVELS } from '@/lib/constants/geolocation';
+import { COPY } from '@/lib/copy';
 
 interface MapControlsProps {
   userLocation?: { lat: number; lng: number };
@@ -81,15 +82,15 @@ export default function MapControls({ userLocation }: MapControlsProps) {
             void handlePress();
           }}
           className="glass ctl rounded-full h-12 min-w-12 px-3 sm:px-4 cursor-pointer inline-flex items-center justify-center gap-2 font-medium text-sm"
-          aria-label="Go to my location"
-          title="My location: zoom in or out"
+          aria-label={COPY.myLocationTitle}
+          title={COPY.myLocationTitle}
           type="button"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          <span className="text-xs font-medium hidden sm:inline">My Location</span>
+          <span className="text-xs font-medium hidden sm:inline">{COPY.myLocation}</span>
         </button>
       </div>
     </div>

@@ -6,6 +6,8 @@
  * (a missing key must be noticed at once, not turn the protection off silently).
  */
 
+import { COPY } from '@/lib/copy';
+
 const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 export async function verifyTurnstile(token: unknown): Promise<boolean> {
@@ -34,4 +36,4 @@ export async function verifyTurnstile(token: unknown): Promise<boolean> {
   }
 }
 
-export const TURNSTILE_FAILED = { error: 'Please complete the check and try again.' } as const;
+export const TURNSTILE_FAILED = { error: COPY.humanCheck } as const;

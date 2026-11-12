@@ -10,6 +10,7 @@
 
 import { useState, useCallback, useEffect } from 'react';
 import { getDeviceId } from '@/lib/utils/device-id';
+import { COPY } from '@/lib/copy';
 import type { Unsaid, CreateUnsaidInput } from '@/types/unsaid';
 
 interface UseUnsaidStateOptions {
@@ -82,7 +83,7 @@ export function useUnsaidState(options: UseUnsaidStateOptions = {}): UseUnsaidSt
       const response = await fetch(`/api/unsaids?initial=true&limit=${initialLimit}`);
 
       if (!response.ok) {
-        throw new Error('Failed to fetch unsaids');
+        throw new Error(COPY.ourSide);
       }
 
       const data = await response.json();
@@ -129,7 +130,7 @@ export function useUnsaidState(options: UseUnsaidStateOptions = {}): UseUnsaidSt
 
       if (!response.ok) {
         const data = await response.json();
-        throw new Error(data.error || 'Failed to create unsaid');
+        throw new Error(data.error || COPY.couldNotShare);
       }
 
       const data = await response.json();
@@ -140,9 +141,9 @@ export function useUnsaidState(options: UseUnsaidStateOptions = {}): UseUnsaidSt
         return data.unsaid;
       }
 
-      throw new Error('Invalid response from server');
+      throw new Error(COPY.couldNotShare);
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to create unsaid';
+      const message = err instanceof Error ? err.message : COPY.couldNotShare;
       setError(message);
       throw err;
     } finally {

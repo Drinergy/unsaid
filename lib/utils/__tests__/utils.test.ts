@@ -280,3 +280,17 @@ describe('map tile provider (tile-provider.ts)', () => {
     expect(pickTileProvider(true, null)).toBe('maptiler'); // probe too slow: try MapTiler anyway
   });
 });
+
+describe('copy (copy.ts): one vocabulary, a kind voice', () => {
+  it('never calls what people write an "unsaid", and never uses cold system words', async () => {
+    const { COPY, MAX_THOUGHT_NOTE } = await import('../../copy');
+    const sentences = [
+      ...Object.values(COPY).map((v) => (typeof v === 'function' ? v(3) : v)),
+      MAX_THOUGHT_NOTE(1000),
+    ] as string[];
+    for (const text of sentences) {
+      expect(text, text).not.toMatch(/\bunsaid\b/i);
+      expect(text, text).not.toMatch(/\b(failed|invalid|error|exception|rate limit|spam)\b/i);
+    }
+  });
+});

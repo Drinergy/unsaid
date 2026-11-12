@@ -12,6 +12,7 @@ import { useState, useEffect } from 'react';
 import { getSavedThoughts, removeSavedThought, exportSavedThoughts, type SavedThought } from '@/lib/utils/saved-thoughts';
 import type { Unsaid } from '@/types/unsaid';
 import LightAvatar from '@/components/unsaid/light-avatar';
+import { COPY } from '@/lib/copy';
 import { timeAgo } from '@/lib/utils/thought-age';
 
 interface SavedThoughtsSidebarProps {
@@ -78,11 +79,11 @@ export default function SavedThoughtsSidebar({ isOpen, onClose, onUnsaidClick }:
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label="Saved thoughts"
+        aria-label={COPY.savedThoughts}
         className="glass-card fixed right-0 top-0 z-[10002] flex h-full w-full flex-col sm:w-[26rem] sm:rounded-l-3xl"
       >
         <div className="flex items-center justify-between pl-5 pr-2 pt-2 pb-1">
-          <h2 className="text-base font-semibold text-gray-100">Saved</h2>
+          <h2 className="text-base font-semibold text-gray-100">{COPY.savedThoughts}</h2>
           <div className="flex items-center">
             {savedThoughts.length > 0 && (
               <button
@@ -112,8 +113,8 @@ export default function SavedThoughtsSidebar({ isOpen, onClose, onUnsaidClick }:
         <div className="scrollbar-dark flex-1 overflow-y-auto px-5 pt-2">
           {savedThoughts.length === 0 ? (
             <div className="mt-16 text-center">
-              <p className="text-gray-200">Nothing saved yet</p>
-              <p className="mt-1 text-sm text-gray-400">Tap the bookmark on a thought to keep it here.</p>
+              <p className="text-gray-200">{COPY.nothingSaved}</p>
+              <p className="mt-1 text-sm text-gray-400">{COPY.nothingSavedHint}</p>
             </div>
           ) : (
             <ul>

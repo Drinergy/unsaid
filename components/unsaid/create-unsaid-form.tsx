@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGeolocation, getDefaultLocation } from '@/lib/hooks/use-geolocation';
 import { validateUnsaid } from '@/lib/utils/content-validation';
 import SheetModal from '@/components/ui/sheet-modal';
+import { COPY } from '@/lib/copy';
 import TurnstileField, { TURNSTILE_ENABLED } from '@/components/ui/turnstile-field';
 import LightAvatar from './light-avatar';
 import type { CreateUnsaidInput } from '@/types/unsaid';
@@ -65,7 +66,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
 
     const validation = validateUnsaid(content);
     if (!validation.valid) {
-      setError(validation.error || 'Invalid content');
+      setError(validation.error || COPY.emptyContent);
       return;
     }
 
@@ -99,11 +100,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
       });
       setContent('');
     } catch (err) {
-      if (err instanceof Error && err.message.includes('Rate limit')) {
-        setError('You have reached the daily limit. Please try again tomorrow.');
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to create unsaid');
-      }
+      setError(err instanceof Error ? err.message : COPY.couldNotShare);
     } finally {
       setSubmitting(false);
       setResetSignal((n) => n + 1); // a token works once
@@ -115,7 +112,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
   const place = location?.city ? `${location.city}${location.countryCode ? `, ${location.countryCode}` : ''}` : null;
 
   return (
-    <SheetModal title="New thought" onClose={submitting ? () => undefined : onCancel}>
+    <SheetModal title={COPY.composerTitle} onClose={submitting ? () => undefined : onCancel}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -140,11 +137,11 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
                   void submit();
                 }
               }}
-              placeholder="What have you never said out loud?"
+              placeholder={COPY.composerPlaceholder}
               rows={4}
               maxLength={MAX_LENGTH}
               disabled={submitting}
-              aria-label="Your unsaid thought"
+              aria-label={COPY.composerAria}
               aria-invalid={error ? 'true' : 'false'}
               className="mt-1 w-full resize-none bg-transparent text-[17px] leading-relaxed text-gray-100 placeholder:text-gray-500 focus:outline-none"
             />
@@ -155,7 +152,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
 
         <div className="flex items-center gap-3 border-t border-white/10 px-5 py-3">
           <p className="min-w-0 flex-1 truncate text-xs text-gray-400">
-            Location blurred to about 100m
+            {COPY.composerNote}
           </p>
           {remaining < 100 && (
             <span className={`text-xs ${remaining < 20 ? 'text-red-300' : 'text-amber-300'}`} aria-live="polite">
@@ -168,7 +165,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
             aria-busy={submitting}
             className="ctl-primary h-10 min-w-[88px] rounded-full px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {submitting ? 'Posting…' : 'Post'}
+            {submitting ? COPY.sharing : COPY.shareButton}
           </button>
         </div>
       </form>

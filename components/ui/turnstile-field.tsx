@@ -7,6 +7,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { COPY } from '@/lib/copy';
 
 export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 export const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY;
@@ -100,7 +101,7 @@ export default function TurnstileField({
       <div ref={boxRef} className="mt-1" />
       {failed && (
         <p className="mt-1 text-sm text-amber-300" role="alert">
-          The check could not load. Turn off content blockers for this site and reload the page.
+          {COPY.botCheckFailed}
         </p>
       )}
     </>
