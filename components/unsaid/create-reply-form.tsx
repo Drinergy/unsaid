@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CreateReplyInput } from '@/types/unsaid';
 import { validateReply } from '@/lib/utils/content-validation';
 import LightAvatar from './light-avatar';
+import TurnstileField, { TURNSTILE_ENABLED } from '@/components/ui/turnstile-field';
 
 interface CreateReplyFormProps {
   unsaidId: string;
@@ -38,6 +39,8 @@ export default function CreateReplyForm({
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -60,12 +63,13 @@ export default function CreateReplyForm({
     }
     setSubmitting(true);
     try {
-      await onSubmit({ unsaidId, parentReplyId, content: content.trim() });
+      await onSubmit({ unsaidId, parentReplyId, content: content.trim(), turnstileToken: token ?? undefined });
       setContent('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create reply');
     } finally {
       setSubmitting(false);
+      setResetSignal((n) => n + 1); // a token works once
     }
   };
 
@@ -108,12 +112,13 @@ export default function CreateReplyForm({
           className="w-full resize-none bg-transparent py-1.5 text-[15px] text-gray-100 placeholder:text-gray-500 focus:outline-none"
         />
         {error && <p className="text-sm text-red-400" role="alert">{error}</p>}
+        <TurnstileField onToken={setToken} resetSignal={resetSignal} />
       </div>
       <div className="flex items-center gap-2 pt-1">
         {remaining < 50 && <span className="text-xs text-amber-300" aria-live="polite">{remaining}</span>}
         <button
           type="submit"
-          disabled={submitting || !content.trim()}
+          disabled={submitting || !content.trim() || (TURNSTILE_ENABLED && !token)}
           className="h-9 rounded-full px-3 text-sm font-semibold text-[rgb(255,214,170)] transition-colors hover:text-white disabled:text-gray-600 disabled:hover:text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
         >
           {submitting ? 'Posting…' : 'Post'}

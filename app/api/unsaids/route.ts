@@ -19,7 +19,35 @@ import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { roundCoordinate } from '@/lib/utils/location';
 import { clusterCellSize } from '@/lib/utils/clustering';
 import { CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocation';
+import { readLimited } from '@/lib/utils/read-limit';
+import { pausedResponse } from '@/lib/utils/kill-switch';
+import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
+
+type UnsaidRow = { id: string; content: string; city: string | null; country_code: string; location: unknown; created_at: string };
+
+/** Database rows to the shape the client uses (location arrives as GeoJSON, as an object or a string) */
+function toUnsaids(rows: UnsaidRow[]) {
+  return rows.map((unsaid) => {
+    let location = { lat: 0, lng: 0 };
+    try {
+      const geoJson = typeof unsaid.location === 'string' ? JSON.parse(unsaid.location) : (unsaid.location as { coordinates?: number[] } | null);
+      if (geoJson && Array.isArray(geoJson.coordinates)) {
+        location = { lng: geoJson.coordinates[0], lat: geoJson.coordinates[1] };
+      }
+    } catch (e) {
+      console.error('Error parsing location:', e);
+    }
+    return {
+      id: unsaid.id,
+      content: unsaid.content,
+      city: unsaid.city,
+      countryCode: unsaid.country_code,
+      location,
+      createdAt: unsaid.created_at,
+    };
+  });
+}
 
 /**
  * GET /api/unsaids
@@ -30,62 +58,64 @@ import crypto from 'crypto';
  */
 export async function GET(request: NextRequest) {
   try {
+    // A free host has a small request quota: one visitor (or script) must not be able to use it all
+    const limited = readLimited(request);
+    if (limited) return limited;
+
     const searchParams = request.nextUrl.searchParams;
     const bbox = searchParams.get('bbox'); // "minLng,minLat,maxLng,maxLat"
     const limit = Math.min(Math.max(parseInt(searchParams.get('limit') || '200', 10) || 200, 1), 500);
     const initial = searchParams.get('initial') === 'true';
+    const zoom = parseFloat(searchParams.get('zoom') || '');
 
     let data;
     let error;
 
-    // Zoomed out: return grid clusters computed in the database instead of up to 200 raw points
-    const zoom = parseFloat(searchParams.get('zoom') || '');
-    if (bbox && !initial && Number.isFinite(zoom) && zoom < CLUSTER_ZOOM_THRESHOLD) {
-      const box = bbox.split(',').map(Number);
-      if (box.length !== 4 || !box.every(Number.isFinite)) {
-        return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
-      }
-      // Snap zoom and box edges so near-identical requests share one CDN entry (a caller cannot
-      // dodge the cache by changing the last decimal)
-      const snappedZoom = Math.round(zoom * 2) / 2;
-      const cell = clusterCellSize(snappedZoom);
-      const [minLng, minLat] = [box[0], box[1]].map((v) => Math.floor(v / cell) * cell);
-      const [maxLng, maxLat] = [box[2], box[3]].map((v) => Math.ceil(v / cell) * cell);
-      const { data: rows, error: clusterError } = await supabaseAdmin.rpc('get_unsaid_clusters', {
-        min_lng: minLng,
-        min_lat: minLat,
-        max_lng: maxLng,
-        max_lat: maxLat,
-        cell_size: cell,
-      });
-      if (clusterError) {
-        console.error('Error fetching clusters:', clusterError);
-        return NextResponse.json({ error: 'Failed to fetch clusters' }, { status: 500 });
-      }
-      const clusters = (rows || []).map((r) => ({
-        lat: r.lat,
-        lng: r.lng,
-        count: Number(r.count),
-        bounds: [[r.bounds_min_lat, r.bounds_min_lng], [r.bounds_max_lat, r.bounds_max_lng]],
-        sample: {
-          id: r.sample_id,
-          content: r.sample_content,
-          city: r.sample_city,
-          countryCode: r.sample_country_code,
-          location: { lat: r.lat, lng: r.lng },
-          createdAt: r.sample_created_at,
-        },
-      }));
-      // Cluster answers are the same for everyone looking at the same box, so let the CDN share them
-      return NextResponse.json({ clusters }, { headers: { 'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=60' } });
-    }
-
     if (bbox && !initial) {
-      // Viewport-based query using PostGIS RPC
-      const [minLng, minLat, maxLng, maxLat] = bbox.split(',').map(Number);
-      if (bbox.split(',').length !== 4 || ![minLng, minLat, maxLng, maxLat].every(Number.isFinite)) {
+      const parsed = bbox.split(',').map(Number);
+      if (parsed.length !== 4 || !parsed.every(Number.isFinite)) {
         return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
       }
+      // Snap zoom and box edges to whole grid cells so near-identical requests share one CDN entry
+      // (a caller cannot dodge the cache by changing the last decimal)
+      const snappedZoom = Number.isFinite(zoom) ? Math.round(zoom * 2) / 2 : null;
+      const cell = snappedZoom === null ? null : clusterCellSize(snappedZoom);
+      const [minLng, minLat] = cell ? [parsed[0], parsed[1]].map((v) => Math.floor(v / cell) * cell) : [parsed[0], parsed[1]];
+      const [maxLng, maxLat] = cell ? [parsed[2], parsed[3]].map((v) => Math.ceil(v / cell) * cell) : [parsed[2], parsed[3]];
+      const cacheHeaders = { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=30' };
+
+      // Zoomed out: return grid clusters computed in the database instead of up to 200 raw points
+      if (snappedZoom !== null && cell && zoom < CLUSTER_ZOOM_THRESHOLD) {
+        const { data: rows, error: clusterError } = await supabaseAdmin.rpc('get_unsaid_clusters', {
+          min_lng: minLng,
+          min_lat: minLat,
+          max_lng: maxLng,
+          max_lat: maxLat,
+          cell_size: cell,
+        });
+        if (clusterError) {
+          console.error('Error fetching clusters:', clusterError);
+          return NextResponse.json({ error: 'Failed to fetch clusters' }, { status: 500 });
+        }
+        const clusters = (rows || []).map((r) => ({
+          lat: r.lat,
+          lng: r.lng,
+          count: Number(r.count),
+          bounds: [[r.bounds_min_lat, r.bounds_min_lng], [r.bounds_max_lat, r.bounds_max_lng]],
+          sample: {
+            id: r.sample_id,
+            content: r.sample_content,
+            city: r.sample_city,
+            countryCode: r.sample_country_code,
+            location: { lat: r.lat, lng: r.lng },
+            createdAt: r.sample_created_at,
+          },
+        }));
+        // Cluster answers are the same for everyone looking at the same box, so let the CDN share them
+        return NextResponse.json({ clusters }, { headers: cacheHeaders });
+      }
+
+      // Viewport-based query using PostGIS RPC
       const result = await supabaseAdmin.rpc('get_unsaids_in_bbox', {
         min_lng: minLng,
         min_lat: minLat,
@@ -95,16 +125,15 @@ export async function GET(request: NextRequest) {
       });
       data = result.data;
       error = result.error;
+      if (!error) return NextResponse.json({ unsaids: toUnsaids(data || []) }, { headers: cacheHeaders });
     } else {
       // Initial load - get most recent
-      const query = supabaseAdmin
+      const result = await supabaseAdmin
         .from('unsaids')
         .select('id, content, city, country_code, location, created_at')
         .eq('is_shadow_banned', false)
         .order('created_at', { ascending: false })
         .limit(limit);
-      
-      const result = await query;
       data = result.data;
       error = result.error;
     }
@@ -114,31 +143,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch unsaids' }, { status: 500 });
     }
 
-    // Transform location from GeoJSON to lat/lng
-    const unsaids = (data || []).map((unsaid) => {
-      let location = { lat: 0, lng: 0 };
-      try {
-        // Parse GeoJSON (from ST_AsGeoJSON or already parsed)
-        const geoJson = typeof unsaid.location === 'string' ? JSON.parse(unsaid.location) : unsaid.location;
-        if (geoJson && geoJson.coordinates && Array.isArray(geoJson.coordinates)) {
-          location = {
-            lng: geoJson.coordinates[0],
-            lat: geoJson.coordinates[1],
-          };
-        }
-      } catch (e) {
-        console.error('Error parsing location:', e);
-      }
-
-      return {
-        id: unsaid.id,
-        content: unsaid.content,
-        city: unsaid.city,
-        countryCode: unsaid.country_code,
-        location,
-        createdAt: unsaid.created_at,
-      };
-    });
+    const unsaids = toUnsaids(data || []);
 
     return NextResponse.json({ unsaids });
   } catch (error) {
@@ -155,8 +160,15 @@ export async function GET(request: NextRequest) {
  * @returns {Promise<NextResponse>} JSON response with created Unsaid
  */
 export async function POST(request: NextRequest) {
+  const paused = pausedResponse();
+  if (paused) return paused;
   try {
     const body = await request.json();
+
+    // Bot check first: it costs nothing in the database
+    if (!(await verifyTurnstile(body.turnstileToken))) {
+      return NextResponse.json(TURNSTILE_FAILED, { status: 400 });
+    }
     const { content, city, countryCode } = body;
     const rawLocation = body.location;
 

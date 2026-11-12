@@ -9,6 +9,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useGeolocation, getDefaultLocation } from '@/lib/hooks/use-geolocation';
 import { validateUnsaid } from '@/lib/utils/content-validation';
 import SheetModal from '@/components/ui/sheet-modal';
+import TurnstileField, { TURNSTILE_ENABLED } from '@/components/ui/turnstile-field';
 import LightAvatar from './light-avatar';
 import type { CreateUnsaidInput } from '@/types/unsaid';
 
@@ -25,6 +26,8 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
   const [content, setContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [resetSignal, setResetSignal] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { location, requestLocation, getCachedLocation } = useGeolocation({
@@ -92,6 +95,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
         location: { lat: final_location.lat, lng: final_location.lng },
         city: final_location.city,
         countryCode: final_location.countryCode || 'XX',
+        turnstileToken: token ?? undefined,
       });
       setContent('');
     } catch (err) {
@@ -102,6 +106,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
       }
     } finally {
       setSubmitting(false);
+      setResetSignal((n) => n + 1); // a token works once
     }
   };
 
@@ -144,6 +149,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
               className="mt-1 w-full resize-none bg-transparent text-[17px] leading-relaxed text-gray-100 placeholder:text-gray-500 focus:outline-none"
             />
             {error && <p className="mt-1 text-sm text-red-400" role="alert">{error}</p>}
+            <TurnstileField onToken={setToken} resetSignal={resetSignal} />
           </div>
         </div>
 
@@ -158,7 +164,7 @@ export default function CreateUnsaidForm({ onSubmit, onCancel }: CreateUnsaidFor
           )}
           <button
             type="submit"
-            disabled={submitting || !hasContent}
+            disabled={submitting || !hasContent || (TURNSTILE_ENABLED && !token)}
             aria-busy={submitting}
             className="ctl-primary h-10 min-w-[88px] rounded-full px-5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-40"
           >

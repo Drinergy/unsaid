@@ -38,6 +38,8 @@ npm run dev                        # http://localhost:3000
 | `SUPABASE_SERVICE_ROLE_KEY` | **server only** | Secret key. Never expose it |
 | `ID_HASH_SECRET` | **server only** | Long random string (`openssl rand -hex 32`). Changing it breaks rate-limit history |
 | `NEXT_PUBLIC_MAPTILER_KEY` | public | Restrict it to your domain in MapTiler |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | public | Cloudflare Turnstile site key (bot check when posting). Add your domain and `localhost` to the widget's hostnames |
+| `TURNSTILE_SECRET_KEY` | **server only** | Turnstile secret key. In production, posting is refused if it is missing; local development skips the check |
 | `NEXT_PUBLIC_APP_URL` | public | `http://localhost:3000` locally |
 
 ### Database
@@ -77,11 +79,20 @@ types/          shared TypeScript types
 - **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
 - **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP; migration 010).
 - **Writes**: the public key cannot write. Row-level security has no write policies; every write goes through the API using the server-only service key.
+- **Bot check**: new thoughts and replies need a Cloudflare Turnstile token (checked on the server before the database is touched).
 - **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
 - **Client IP** comes from platform headers (`x-vercel-forwarded-for`, `x-real-ip`) or the last `x-forwarded-for` hop. In `next dev` there is no proxy, so everyone shares one IP.
 
-- **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. If the user denies location, the browser asks ipapi.co for an approximate place from their IP.
+- **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. If the user denies location, the browser asks ipapi.co for an approximate place from their IP. The posting forms load Cloudflare Turnstile (the bot check), so Cloudflare sees the visitor's IP when a form opens.
+
+## Running on free tiers (spam and traffic spikes)
+
+- **Map tiles:** MapTiler's free plan allows about 5,000 map sessions a month. The map only loads after a visitor enters, and if MapTiler refuses (quota or bad key) it falls back to plain OpenStreetMap tiles shown dark. That fallback is a stopgap: OpenStreetMap's servers are for light use.
+- **Live updates:** a free Supabase project allows 200 open live connections, so hidden tabs disconnect and reload when they come back.
+- **Reads:** 600 per minute per IP (generous, because many phones share one mobile-carrier IP), with short CDN caching on map queries.
+- **Emergency brake:** set `POSTING_PAUSED=1` in Vercel and redeploy to stop new thoughts, replies and reactions (reading and reporting still work).
+- **Clean-up:** `node --env-file=.env.local scripts/moderate.mjs top` shows the busiest posters (hashed IPs); `hide <ip-hash>` / `unhide <ip-hash>` shadow-bans or restores everything from one IP.
 
 ## Deploying
 

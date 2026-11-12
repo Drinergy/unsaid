@@ -6,7 +6,7 @@
  * needs), so we fetch the full record from the API, and only if it is near the view.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import type { Unsaid, Reply } from '@/types/unsaid';
 import { parseRealtimePoint } from '@/lib/utils/ewkb';
@@ -18,26 +18,64 @@ interface UseRealtimeOptions {
   onUnsaidDeleted?: (unsaidId: string) => void;
   onUnsaidShadowBanned?: (unsaidId: string) => void;
   viewportBounds?: { minLng: number; minLat: number; maxLng: number; maxLat: number } | null;
+  /** Called when live updates may have been missed (tab visible again, or the live connection is down): reload what is shown */
+  onRefresh?: () => void;
+}
+
+/** While the live connection is down, reload this often instead */
+const FALLBACK_REFRESH_MS = 60_000;
+
+function useTabVisible(): boolean {
+  const [visible, setVisible] = useState(true);
+  useEffect(() => {
+    const update = () => setVisible(document.visibilityState === 'visible');
+    update();
+    document.addEventListener('visibilitychange', update);
+    return () => document.removeEventListener('visibilitychange', update);
+  }, []);
+  return visible;
 }
 
 let channelCounter = 0;
 
 /**
- * Subscribes only to the events whose handlers are passed. Handlers and bounds are read
- * through a ref, so inline callbacks do not cause a re-subscribe on every render.
+ * Subscribes only to the events whose handlers are passed, and only while the tab is visible
+ * (a free Supabase project allows 200 open live connections, so background tabs must not hold one).
+ * Handlers and bounds are read through a ref, so inline callbacks do not cause a re-subscribe on every render.
  */
 export function useRealtime(options: UseRealtimeOptions) {
+  const hiddenBefore = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
   const wantsUnsaids = !!(options.onNewUnsaid || options.onUnsaidDeleted || options.onUnsaidShadowBanned);
   const wantsReplies = !!options.onNewReply;
+  const visible = useTabVisible();
 
   useEffect(() => {
     // Unique topic per hook instance: two hooks sharing one name would share one channel
     const id = ++channelCounter;
     const channels: ReturnType<typeof supabase.channel>[] = [];
     let cancelled = false;
+    if (!visible) {
+      hiddenBefore.current = true;
+      return;
+    }
+
+    // Back in view after being hidden: events were missed, so reload once
+    if (hiddenBefore.current) optionsRef.current.onRefresh?.();
+    hiddenBefore.current = false;
+
+    // If the live connection cannot be made, reload on a timer until it works
+    let fallback: ReturnType<typeof setInterval> | null = null;
+    const watch = (status: string) => {
+      if (status === 'SUBSCRIBED') {
+        if (fallback) clearInterval(fallback);
+        fallback = null;
+      } else if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') && !fallback) {
+        fallback = setInterval(() => optionsRef.current.onRefresh?.(), FALLBACK_REFRESH_MS);
+      }
+    };
 
     if (wantsUnsaids) {
       const channel = supabase
@@ -72,7 +110,7 @@ export function useRealtime(options: UseRealtimeOptions) {
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'unsaids' }, (payload) => {
           optionsRef.current.onUnsaidDeleted?.(payload.old.id);
         })
-        .subscribe();
+        .subscribe(watch);
       channels.push(channel);
     }
 
@@ -93,13 +131,14 @@ export function useRealtime(options: UseRealtimeOptions) {
             });
           }
         )
-        .subscribe();
+        .subscribe(watch);
       channels.push(channel);
     }
 
     return () => {
       cancelled = true;
+      if (fallback) clearInterval(fallback);
       channels.forEach((c) => supabase.removeChannel(c));
     };
-  }, [wantsUnsaids, wantsReplies]);
+  }, [wantsUnsaids, wantsReplies, visible]);
 }

@@ -91,6 +91,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
     onNewReply: (reply) => {
       if (reply.unsaidId === unsaidId) fetchUnsaid();
     },
+    onRefresh: fetchUnsaid,
   });
 
   // Close the ⋯ menu on outside click

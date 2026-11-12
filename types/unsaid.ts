@@ -51,10 +51,13 @@ export interface CreateUnsaidInput {
   };
   city?: string;
   countryCode: string;
+  /** One-time bot-check token from Turnstile (see components/ui/turnstile-field.tsx) */
+  turnstileToken?: string;
 }
 
 export interface CreateReplyInput {
   unsaidId: string;
   parentReplyId?: string | null;
   content: string;
+  turnstileToken?: string;
 }
