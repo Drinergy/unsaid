@@ -18,6 +18,7 @@ import { checkContentFilter } from '@/lib/utils/keyword-filter';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { nextReplyDepth, isReplyDepthAllowed } from '@/lib/utils/reply-depth';
 import { pausedResponse } from '@/lib/utils/kill-switch';
+import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
 
 /**
@@ -32,6 +33,11 @@ export async function POST(request: NextRequest) {
   if (paused) return paused;
   try {
     const body = await request.json();
+
+    // Bot check first: it costs nothing in the database
+    if (!(await verifyTurnstile(body.turnstileToken))) {
+      return NextResponse.json(TURNSTILE_FAILED, { status: 400 });
+    }
     const { unsaidId, parentReplyId, content } = body;
 
     const deviceId = hashDeviceId(body.deviceId);

@@ -21,6 +21,7 @@ import { clusterCellSize } from '@/lib/utils/clustering';
 import { CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocation';
 import { allowBurst } from '@/lib/utils/burst-limit';
 import { pausedResponse } from '@/lib/utils/kill-switch';
+import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
 
 const READS_PER_MINUTE_PER_IP = 180;
@@ -166,6 +167,11 @@ export async function POST(request: NextRequest) {
   if (paused) return paused;
   try {
     const body = await request.json();
+
+    // Bot check first: it costs nothing in the database
+    if (!(await verifyTurnstile(body.turnstileToken))) {
+      return NextResponse.json(TURNSTILE_FAILED, { status: 400 });
+    }
     const { content, city, countryCode } = body;
     const rawLocation = body.location;
 
