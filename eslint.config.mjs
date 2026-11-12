@@ -14,7 +14,7 @@ const config = [
       'react-hooks/purity': 'warn',
     },
   },
-  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'public/**'] },
+  { ignores: ['.next/**', 'node_modules/**', 'next-env.d.ts', 'public/**', 'video/**'] },
 ];
 
 export default config;
