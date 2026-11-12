@@ -19,12 +19,10 @@ import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { roundCoordinate } from '@/lib/utils/location';
 import { clusterCellSize } from '@/lib/utils/clustering';
 import { CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocation';
-import { allowBurst } from '@/lib/utils/burst-limit';
+import { readLimited } from '@/lib/utils/read-limit';
 import { pausedResponse } from '@/lib/utils/kill-switch';
 import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
-
-const READS_PER_MINUTE_PER_IP = 180;
 
 type UnsaidRow = { id: string; content: string; city: string | null; country_code: string; location: unknown; created_at: string };
 
@@ -61,9 +59,8 @@ function toUnsaids(rows: UnsaidRow[]) {
 export async function GET(request: NextRequest) {
   try {
     // A free host has a small request quota: one visitor (or script) must not be able to use it all
-    if (!allowBurst(`read:${hashRequestIp(request)}`, READS_PER_MINUTE_PER_IP, 60_000)) {
-      return NextResponse.json({ error: 'Too many requests. Please slow down.' }, { status: 429, headers: { 'Retry-After': '30' } });
-    }
+    const limited = readLimited(request);
+    if (limited) return limited;
 
     const searchParams = request.nextUrl.searchParams;
     const bbox = searchParams.get('bbox'); // "minLng,minLat,maxLng,maxLat"

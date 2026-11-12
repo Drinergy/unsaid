@@ -135,9 +135,10 @@ describe('kill switch (POSTING_PAUSED=1)', () => {
 });
 
 describe('read rate limit', () => {
-  it('answers 429 after 180 reads a minute from one IP', async () => {
+  it('answers 429 after 600 reads a minute from one IP, without needing the hash secret', async () => {
+    delete process.env.ID_HASH_SECRET; // reads must not depend on it
     const { GET } = await import('@/app/api/unsaids/route');
-    for (let i = 0; i < 180; i++) expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'))).status).toBe(200);
+    for (let i = 0; i < 600; i++) expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'))).status).toBe(200);
     const blocked = await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'));
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get('Retry-After')).toBe('30');

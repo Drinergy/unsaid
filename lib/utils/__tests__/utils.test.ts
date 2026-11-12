@@ -238,6 +238,9 @@ describe('parseRealtimePoint (what a Realtime event really carries)', () => {
 describe('content filter: links, contact details and spam', () => {
   it.each([
     'check out shop.com for cheap stuff',
+    'Buy at Cheapstuff.com',
+    'SHOP.COM',
+    'Visit Shop.Com now',
     'visit www . mysite . com',
     'my site is shop dot com',
     'buy at shop (dot) me now',

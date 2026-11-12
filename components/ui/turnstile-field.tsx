@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 export const TURNSTILE_ENABLED = !!TURNSTILE_SITE_KEY;
@@ -45,6 +45,7 @@ export default function TurnstileField({
   onToken: (token: string | null) => void;
   resetSignal?: number;
 }): React.ReactElement | null {
+  const [failed, setFailed] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
@@ -62,12 +63,22 @@ export default function TurnstileField({
           sitekey: TURNSTILE_SITE_KEY,
           theme: 'dark',
           appearance: 'interaction-only', // stays invisible unless Cloudflare needs a click
-          callback: (token: string) => onTokenRef.current(token),
+          callback: (token: string) => {
+            setFailed(false);
+            onTokenRef.current(token);
+          },
           'expired-callback': () => onTokenRef.current(null),
-          'error-callback': () => onTokenRef.current(null),
+          'error-callback': () => {
+            setFailed(true);
+            onTokenRef.current(null);
+          },
         });
       })
-      .catch(() => onTokenRef.current(null));
+      .catch(() => {
+        // Usually a content blocker stopping challenges.cloudflare.com
+        setFailed(true);
+        onTokenRef.current(null);
+      });
     return () => {
       cancelled = true;
       if (widgetRef.current) window.turnstile?.remove(widgetRef.current);
@@ -83,5 +94,15 @@ export default function TurnstileField({
     }
   }, [resetSignal]);
 
-  return TURNSTILE_ENABLED ? <div ref={boxRef} className="mt-1" /> : null;
+  if (!TURNSTILE_ENABLED) return null;
+  return (
+    <>
+      <div ref={boxRef} className="mt-1" />
+      {failed && (
+        <p className="mt-1 text-sm text-amber-300" role="alert">
+          The check could not load. Turn off content blockers for this site and reload the page.
+        </p>
+      )}
+    </>
+  );
 }

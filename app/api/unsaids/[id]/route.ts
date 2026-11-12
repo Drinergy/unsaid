@@ -8,13 +8,12 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
-import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
-import { allowBurst } from '@/lib/utils/burst-limit';
+import { hashDeviceId } from '@/lib/utils/request-identity';
+import { readLimited } from '@/lib/utils/read-limit';
 import { getReactionCounts, getMyReaction } from '@/lib/utils/reaction-counts';
 
 const DEFAULT_REPLY_PAGE = 200;
 const MAX_REPLY_PAGE = 1000;
-const READS_PER_MINUTE_PER_IP = 180;
 
 /**
  * GET /api/unsaids/[id]
@@ -29,9 +28,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    if (!allowBurst(`read:${hashRequestIp(request)}`, READS_PER_MINUTE_PER_IP, 60_000)) {
-      return NextResponse.json({ error: 'Too many requests. Please slow down.' }, { status: 429, headers: { 'Retry-After': '30' } });
-    }
+    const limited = readLimited(request);
+    if (limited) return limited;
     const { id } = await params;
 
     // Fetch Unsaid (exclude shadow-banned thoughts)
