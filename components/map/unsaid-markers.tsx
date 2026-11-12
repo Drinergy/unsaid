@@ -9,8 +9,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CircleMarker, Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
-import type { LeafletMouseEvent, PathOptions } from 'leaflet';
+import { Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import type { LeafletMouseEvent } from 'leaflet';
 import L from 'leaflet';
 import type { Unsaid } from '@/types/unsaid';
 import LightAvatar from '@/components/unsaid/light-avatar';
@@ -22,7 +22,7 @@ import { COPY } from '@/lib/copy';
 import { SHARED_EVENT, type SharedDetail } from '@/lib/utils/notices';
 
 /** A finger needs about 44px; the glowing dots are only 8 to 12px wide. */
-const TOUCH_HIT_RADIUS = 22;
+const TOUCH_HIT_SIZE = 44;
 
 function useCoarsePointer(): boolean {
   const [coarse, setCoarse] = useState(false);
@@ -37,44 +37,63 @@ function useCoarsePointer(): boolean {
 }
 
 /**
- * One glowing dot. With a mouse it is the dot itself that reacts (with a hover tooltip). On a touch
- * screen the dot is only drawn, and an invisible circle of finger size on top takes the tap (a
- * hover tooltip makes no sense there, and the tap opens the thought anyway).
+ * The light is a plain HTML circle with a CSS glow (box-shadow), not an SVG shape with a filter: Safari does
+ * not draw CSS filters on SVG shapes, so the halo was missing there. Icons are shared between dots that look
+ * the same.
+ */
+const iconCache = new Map<string, L.DivIcon>();
+function dotIcon(radius: number, hit: number, extraClass: string, opacity: number): L.DivIcon {
+  const box = Math.max(radius * 2 + 4, hit);
+  const key = `${box}|${radius}|${extraClass}|${opacity}`;
+  let icon = iconCache.get(key);
+  if (!icon) {
+    const size = radius * 2 + 2;
+    icon = L.divIcon({
+      className: 'light-marker-box',
+      html: `<span class="light-marker ${extraClass}" style="width:${size}px;height:${size}px;font-size:${size}px;--o:${opacity}"></span>`,
+      iconSize: [box, box],
+      iconAnchor: [box / 2, box / 2],
+    });
+    iconCache.set(key, icon);
+  }
+  return icon;
+}
+
+/**
+ * One glowing dot. With a mouse it shows a tooltip on hover. On a touch screen the tap area is a 44px
+ * box around the dot (a hover tooltip makes no sense there, and the tap opens the thought anyway).
  */
 function Dot({
   center,
   radius,
-  pathOptions,
+  opacity = 1,
+  dim = false,
+  fresh = false,
   onClick,
   tooltip,
   coarse,
 }: {
   center: [number, number];
   radius: number;
-  pathOptions: PathOptions;
+  /** 1 for new thoughts, less for older ones */
+  opacity?: number;
+  /** Older thoughts glow less */
+  dim?: boolean;
+  /** Just shared: its light arrives slowly */
+  fresh?: boolean;
   onClick: (e: LeafletMouseEvent) => void;
   tooltip: React.ReactNode;
   coarse: boolean;
 }): React.ReactElement {
-  if (!coarse) {
-    return (
-      <CircleMarker center={center} radius={radius} pathOptions={pathOptions} eventHandlers={{ click: onClick }}>
-        <Tooltip permanent={false} direction="top" offset={[0, -10]} className="unsaid-tooltip" opacity={1}>
+  const icon = dotIcon(radius, coarse ? TOUCH_HIT_SIZE : 0, `${dim ? 'light-marker--dim' : ''} ${fresh ? 'light-marker--new' : ''}`.trim(), opacity);
+  return (
+    <Marker position={center} icon={icon} keyboard={false} eventHandlers={{ click: onClick }}>
+      {!coarse && (
+        <Tooltip permanent={false} direction="top" offset={[0, -(radius + 6)]} className="unsaid-tooltip" opacity={1}>
           {tooltip}
         </Tooltip>
-      </CircleMarker>
-    );
-  }
-  return (
-    <>
-      <CircleMarker center={center} radius={radius} pathOptions={{ ...pathOptions, interactive: false }} />
-      <CircleMarker
-        center={center}
-        radius={Math.max(radius, TOUCH_HIT_RADIUS)}
-        pathOptions={{ stroke: false, fill: true, fillOpacity: 0, className: 'unsaid-hit' }}
-        eventHandlers={{ click: onClick }}
-      />
-    </>
+      )}
+    </Marker>
   );
 }
 
@@ -205,13 +224,6 @@ export default function UnsaidMarkers({
             coarse={coarse}
             center={[cluster.center.lat, cluster.center.lng]}
             radius={clusterRadius(cluster.count)}
-            pathOptions={{
-              className: 'unsaid-dot marker-fade-in',
-              color: 'rgba(255, 190, 120, 0.9)',
-              weight: 2,
-              fillColor: 'rgb(255, 244, 227)',
-              fillOpacity: 0.96,
-            }}
             // A "cluster" of one is just a thought: zoom to it and open it, like in the close-up view
             onClick={() => (cluster.count === 1 && cluster.thoughts[0] ? handleNodeClick(cluster.thoughts[0]) : handleClusterClick(cluster))}
             tooltip={
@@ -250,13 +262,7 @@ export default function UnsaidMarkers({
               coarse={coarse}
               center={[center.lat, center.lng]}
               radius={Math.min(7 + group.length, 16)}
-              pathOptions={{
-                className: 'unsaid-dot marker-fade-in',
-                color: 'rgba(255, 190, 120, 0.9)',
-                weight: 2,
-                fillColor: 'rgb(255, 244, 227)',
-                fillOpacity: 0.96,
-              }}
+              fresh={group.some((t) => t.id === fresh?.id)}
               onClick={(e) => {
                 e.target.closeTooltip?.(); // else the hover tooltip covers the popup
                 setOpenGroup({
@@ -288,13 +294,9 @@ export default function UnsaidMarkers({
             coarse={coarse}
             center={[unsaid.location.lat, unsaid.location.lng]}
             radius={age.isRecent ? 5 : 4}
-            pathOptions={{
-              className: `unsaid-dot marker-fade-in${opacity < 0.6 ? ' unsaid-dot--dim' : ''}${fresh?.id === unsaid.id ? ' unsaid-dot--new' : ''}`,
-              color: `rgba(255, 190, 120, ${0.9 * opacity})`,
-              weight: 1.5,
-              fillColor: 'rgb(255, 244, 227)',
-              fillOpacity: Math.min(1, 0.4 + 0.6 * opacity),
-            }}
+            opacity={Math.min(1, 0.4 + 0.6 * opacity)}
+            dim={opacity < 0.6}
+            fresh={fresh?.id === unsaid.id}
             onClick={() => handleNodeClick(unsaid)}
             tooltip={<div>{previewText}</div>}
           />

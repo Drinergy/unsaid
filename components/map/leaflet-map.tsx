@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useEffect, useId, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import type { Unsaid } from '@/types/unsaid';
@@ -81,6 +81,11 @@ export default function LeafletMap({
   const [tilesLoaded, setTilesLoaded] = useState(false);
   const [gaveUp, setGaveUp] = useState(false);
   const ready = (tilesLoaded && dataLoaded) || gaveUp;
+
+  // With a place to fly to, show nothing on the map until the fly-in has landed. Otherwise the lights of the
+  // world view show for a moment, then vanish while the map zooms, then come back for the new view.
+  const [landed, setLanded] = useState(!hasUserLocation);
+  const onLanded = useCallback(() => setLanded(true), []);
   useEffect(() => {
     const timer = setTimeout(() => setGaveUp(true), GIVE_UP_MS);
     return () => clearTimeout(timer);
@@ -125,16 +130,16 @@ export default function LeafletMap({
         {/* Tell the data hook where the map is looking */}
         <ViewportEvents onChange={onViewChange} />
 
-        {ready && (
-          <>
-            <HideMarkersWhileZooming />
-            <UnsaidMarkers unsaids={visibleUnsaids} serverClusters={serverClusters} onUnsaidClick={onUnsaidClick} />
-          </>
+        <HideLightsWhileZooming />
+        {!landed && <FlightWatcher ready={ready} onLanded={onLanded} />}
+
+        {ready && landed && (
+          <UnsaidMarkers unsaids={visibleUnsaids} serverClusters={serverClusters} onUnsaidClick={onUnsaidClick} />
         )}
       </MapContainer>
 
       {/* Live status instead of a permanent banner: what is actually in this view */}
-      {ready && viewCount && (
+      {ready && landed && viewCount && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none" role="status" aria-live="polite">
           <div className="glass rounded-full h-10 px-4 inline-flex items-center gap-2 text-sm text-gray-200 whitespace-nowrap">
             <span className="light-dot w-2.5 h-2.5 rounded-full" aria-hidden="true" />
@@ -155,11 +160,10 @@ export default function LeafletMap({
 }
 
 /**
- * Leaflet CSS-scales the SVG marker layer during a zoom and only redraws it at the
- * final size afterwards, so dots balloon and then snap back. Hide the layer while
- * zooming (see `.is-zooming` in globals.css) and fade it back in after.
+ * While the map zooms, the lights belong to the old zoom (their groups and counts are about to change), so
+ * hide them (see `.is-zooming` in globals.css) and fade them back after.
  */
-function HideMarkersWhileZooming(): null {
+function HideLightsWhileZooming(): null {
   const map = useMap();
   useEffect(() => {
     const el = map.getContainer();
@@ -173,5 +177,32 @@ function HideMarkersWhileZooming(): null {
       end();
     };
   }, [map]);
+  return null;
+}
+
+/** If the fly-in never lands (nothing to fly, or it was interrupted), show the lights anyway after this */
+const FLIGHT_GIVE_UP_MS = 4000;
+
+/** Tells the map component when the first fly-in has finished: the first zoom that starts and then ends */
+function FlightWatcher({ ready, onLanded }: { ready: boolean; onLanded: () => void }): null {
+  const map = useMap();
+  useEffect(() => {
+    let started = false;
+    const start = () => {
+      started = true;
+    };
+    const end = () => {
+      if (started) onLanded();
+    };
+    map.on('zoomstart', start);
+    map.on('zoomend', end);
+    // The flight only begins once the map is ready, so the safety timer starts then too
+    const fallback = ready ? setTimeout(onLanded, FLIGHT_GIVE_UP_MS) : null;
+    return () => {
+      map.off('zoomstart', start);
+      map.off('zoomend', end);
+      if (fallback) clearTimeout(fallback);
+    };
+  }, [map, ready, onLanded]);
   return null;
 }
