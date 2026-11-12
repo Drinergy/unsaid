@@ -38,7 +38,7 @@ export default function SheetModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="glass-card w-full sm:max-w-xl max-h-[92vh] flex flex-col rounded-t-3xl sm:rounded-3xl"
+        className="glass-card w-full sm:max-w-xl max-h-[92dvh] pb-[env(safe-area-inset-bottom)] flex flex-col rounded-t-3xl sm:rounded-3xl"
       >
         <div className="flex items-center justify-between pl-5 pr-2 pt-2 pb-1">
           <h2 className="text-base font-semibold text-gray-100">{title}</h2>

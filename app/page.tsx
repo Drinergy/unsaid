@@ -105,7 +105,7 @@ export default function Home(): React.ReactElement {
   const initial_zoom = user_location ? USER_LOCATION_ZOOM : DEFAULT_ZOOM;
 
   return (
-    <main className="w-full h-screen bg-black overflow-hidden relative">
+    <main className="w-full h-dvh bg-black overflow-hidden relative">
       {/* Map (always rendered, faded when landing is visible) */}
       <div className={`absolute inset-0 transition-opacity duration-500 ${show_map ? 'opacity-100' : 'opacity-30'}`}>
         <MapErrorBoundary>
@@ -182,29 +182,29 @@ function FloatingActions({
   onSavedClick: () => void;
 }): React.ReactElement {
   return (
-    <div className="fixed bottom-8 right-8 z-[10000] flex flex-col gap-3 items-end">
-      <>
-          <button
-            onClick={onSavedClick}
-            className="glass ctl rounded-full w-12 h-12 grid place-items-center"
-            aria-label="Saved thoughts"
-            title="Saved thoughts (Ctrl+S)"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-            </svg>
-          </button>
-          <button
-            onClick={onCreateClick}
-            className="ctl-primary rounded-full w-16 h-16 grid place-items-center"
-            aria-label="Create new Unsaid"
-            title="Create new Unsaid (C)"
-          >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
-      </>
-    </div>
+    <>
+      {/* Phones: Saved sits under My Location (top right); the + stays in the thumb zone (bottom right).
+          Larger screens: both stack at the bottom right. */}
+      <button
+        onClick={onSavedClick}
+        className="glass ctl fixed z-[10000] top-[4.25rem] right-[10px] sm:top-auto sm:bottom-[6.75rem] sm:right-8 rounded-full w-11 h-11 sm:w-12 sm:h-12 grid place-items-center"
+        aria-label="Saved thoughts"
+        title="Saved thoughts (Ctrl+S)"
+      >
+        <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+        </svg>
+      </button>
+      <button
+        onClick={onCreateClick}
+        className="ctl-primary fixed z-[10000] bottom-[calc(1rem+env(safe-area-inset-bottom))] right-4 sm:bottom-8 sm:right-8 rounded-full w-14 h-14 sm:w-16 sm:h-16 grid place-items-center"
+        aria-label="Create new Unsaid"
+        title="Create new Unsaid (C)"
+      >
+        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+        </svg>
+      </button>
+    </>
   );
 }
