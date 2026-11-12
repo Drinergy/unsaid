@@ -294,3 +294,19 @@ describe('copy (copy.ts): one vocabulary, a kind voice', () => {
     }
   });
 });
+
+describe('scroll intent (scroll-intent.ts)', () => {
+  it('knows when the visitor wants to go down, and ignores jitter and upward moves', async () => {
+    const { wheelGoesDown, swipeGoesDown, keyGoesDown } = await import('../scroll-intent');
+    expect(wheelGoesDown(40)).toBe(true);
+    expect(wheelGoesDown(3)).toBe(false); // trackpad jitter
+    expect(wheelGoesDown(-40)).toBe(false); // scrolling up
+    expect(swipeGoesDown(600, 400)).toBe(true); // finger moved up
+    expect(swipeGoesDown(600, 580)).toBe(false); // too short
+    expect(swipeGoesDown(400, 600)).toBe(false); // finger moved down
+    expect(keyGoesDown('ArrowDown')).toBe(true);
+    expect(keyGoesDown(' ')).toBe(true);
+    expect(keyGoesDown('ArrowUp')).toBe(false);
+    expect(keyGoesDown('a')).toBe(false);
+  });
+});

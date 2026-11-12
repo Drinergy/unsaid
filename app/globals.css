@@ -167,6 +167,42 @@
   animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 
+/* Map loading: the world drifts, rings search outward from a light, the caption breathes */
+@keyframes skeleton-drift {
+  from { transform: scale(1.03); }
+  to { transform: scale(1.1); }
+}
+.skeleton-drift { animation: skeleton-drift 18s ease-in-out infinite alternate; }
+@keyframes search-ring {
+  0% { transform: translate(-50%, -50%) scale(0.15); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+.search-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(120vw, 720px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(0.5);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 190, 120, 0.5);
+  box-shadow: 0 0 28px rgba(255, 170, 90, 0.18), inset 0 0 28px rgba(255, 170, 90, 0.08);
+  opacity: 0.25;
+  animation: search-ring 3.6s ease-out infinite;
+}
+.breathe { animation: glow-breathe 2.4s ease-in-out infinite; }
+@keyframes caption-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 0.9; }
+}
+.loading-caption { animation: caption-breathe 2.4s ease-in-out infinite; }
+/* The arrow on the landing page: a slow, gentle bounce */
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50% { transform: translateY(8px); opacity: 1; }
+}
+.bounce-soft { animation: bounce-soft 1.8s ease-in-out infinite; }
+
 /* Loading skeleton */
 @keyframes skeleton-loading {
   0% {
@@ -210,6 +246,11 @@
   .marker-fade-in,
   .unsaid-dot.marker-fade-in,
   .unsaid-dot.marker-fade-in.unsaid-dot--new,
+  .skeleton-drift,
+  .search-ring,
+  .breathe,
+  .loading-caption,
+  .bounce-soft,
   .rise-in {
     animation: none;
   }
