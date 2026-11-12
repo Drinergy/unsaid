@@ -48,7 +48,9 @@ export default function TurnstileField({
   const boxRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
-  onTokenRef.current = onToken;
+  useEffect(() => {
+    onTokenRef.current = onToken;
+  });
 
   useEffect(() => {
     if (!TURNSTILE_ENABLED) return;
