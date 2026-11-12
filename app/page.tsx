@@ -106,18 +106,21 @@ export default function Home(): React.ReactElement {
 
   return (
     <main className="w-full h-dvh bg-black overflow-hidden relative">
-      {/* Map (always rendered, faded when landing is visible) */}
-      <div className={`absolute inset-0 transition-opacity duration-500 ${show_map ? 'opacity-100' : 'opacity-30'}`}>
-        <MapErrorBoundary>
-          <WorldMap
-            onUnsaidClick={handleUnsaidClick}
-            initialUnsads={unsaids}
-            initialCenter={user_location || undefined}
-            initialZoom={initial_zoom}
-            userLocation={user_location || undefined}
-          />
-        </MapErrorBoundary>
-      </div>
+      {/* Map: only mounted once the visitor enters, so people who just look at the landing page
+          do not use up the free map-tile quota */}
+      {show_map && (
+        <div className="absolute inset-0">
+          <MapErrorBoundary>
+            <WorldMap
+              onUnsaidClick={handleUnsaidClick}
+              initialUnsads={unsaids}
+              initialCenter={user_location || undefined}
+              initialZoom={initial_zoom}
+              userLocation={user_location || undefined}
+            />
+          </MapErrorBoundary>
+        </div>
+      )}
 
       {/* Landing page overlay */}
       {!show_map && (

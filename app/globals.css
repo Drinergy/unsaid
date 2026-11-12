@@ -197,6 +197,11 @@ select:focus-visible {
   color: rgba(255, 255, 255, 0.45) !important;
 }
 
+/* Fallback OpenStreetMap tiles are a light map: invert them into a dark one */
+.tiles-dark {
+  filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.9) saturate(0.4);
+}
+
 /* Hide markers while zooming (Leaflet scales the SVG layer mid-zoom), fade back after */
 .leaflet-overlay-pane {
   transition: opacity 0.25s ease-out;

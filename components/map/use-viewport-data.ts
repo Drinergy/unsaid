@@ -41,6 +41,7 @@ export function useViewportData(initialUnsaids: Unsaid[]) {
   const [viewCount, setViewCount] = useState<{ count: number; capped: boolean } | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
 
+  const lastViewRef = useRef<{ view: ViewBounds; zoom: number } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -76,7 +77,8 @@ export function useViewportData(initialUnsaids: Unsaid[]) {
             setViewCount({ count: onScreen.reduce((sum, r) => sum + Number(r.count), 0), capped: false });
             setServerClusters({ zoom, clusters: mergeOverlapping(clustersFromApi(rows), zoom) });
           } else if (Array.isArray(data?.unsaids)) {
-            setViewCount({ count: data.unsaids.length, capped: data.unsaids.length >= RAW_LIMIT });
+            // The server rounds the box outwards to whole cells, so count only what is on screen
+            setViewCount({ count: data.unsaids.filter((u: Unsaid) => pointInBounds(u.location, view, 0)).length, capped: data.unsaids.length >= RAW_LIMIT });
             setServerClusters(null);
             merge(data.unsaids);
           }
@@ -96,6 +98,7 @@ export function useViewportData(initialUnsaids: Unsaid[]) {
   const onViewChange = useCallback(
     (view: ViewBounds, zoom: number) => {
       setBounds(view);
+      lastViewRef.current = { view, zoom };
       setFetched((prev) => {
         const kept = prev.filter((u) => inBounds(u, view, KEEP_PAD));
         return kept.length === prev.length ? prev : kept;
@@ -120,6 +123,7 @@ export function useViewportData(initialUnsaids: Unsaid[]) {
     onNewUnsaid: (unsaid) => merge([unsaid]),
     onUnsaidDeleted: remove,
     onUnsaidShadowBanned: remove,
+    onRefresh: () => lastViewRef.current && load(lastViewRef.current.view, lastViewRef.current.zoom),
   });
 
   // The thoughts to draw: what the page already has plus what was loaded, near the view

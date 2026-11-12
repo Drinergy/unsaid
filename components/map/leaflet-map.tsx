@@ -16,6 +16,7 @@ import FlyToLocation from './fly-to-location';
 import ViewportEvents from './viewport-events';
 import UnsaidMarkers from './unsaid-markers';
 import { useViewportData } from './use-viewport-data';
+import { probeTileProvider, TILE_SOURCES, type TileProvider } from '@/lib/utils/tile-provider';
 
 interface LeafletMapProps {
   /** Callback when an unsaid marker is clicked */
@@ -58,6 +59,16 @@ export default function LeafletMap({
   // One key per mount so the map container is never reused
   const mapKey = useId();
 
+  // Which tiles to use is decided once, before any tile is requested (see tile-provider.ts)
+  const [provider, setProvider] = useState<TileProvider | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    probeTileProvider().then((p) => !cancelled && setProvider(p));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const { visibleUnsaids, serverClusters, viewCount, dataLoaded, onViewChange } = useViewportData(initialUnsads);
 
   // Show a skeleton until the first tiles AND the first viewport data are in, then reveal
@@ -86,13 +97,20 @@ export default function LeafletMap({
         {/* Credit is required by MapTiler/OSM terms; keep it, but without the Leaflet flag */}
         <AttributionControl position="bottomright" prefix={false} />
 
-        {/* MapTiler dark raster tiles (free tier, needs NEXT_PUBLIC_MAPTILER_KEY) */}
-        <TileLayer
-          url={`https://api.maptiler.com/maps/dataviz-dark/256/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_MAPTILER_KEY}`}
-          maxZoom={19}
-          attribution='&copy; <a href="https://www.maptiler.com/copyright/">MapTiler</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          eventHandlers={{ load: () => setTilesLoaded(true) }}
-        />
+        {/* Dark raster tiles: MapTiler, or plain OpenStreetMap when MapTiler's quota or key is exhausted.
+            updateWhenZooming and keepBuffer keep tile requests (and the free quota) low. */}
+        {provider && (
+          <TileLayer
+            key={provider}
+            url={TILE_SOURCES[provider].url}
+            className={TILE_SOURCES[provider].className}
+            maxZoom={19}
+            updateWhenZooming={false}
+            keepBuffer={1}
+            attribution={TILE_SOURCES[provider].attribution}
+            eventHandlers={{ load: () => setTilesLoaded(true) }}
+          />
+        )}
 
         {/* FlyTo user location with smooth animation */}
         {initialCenter && <FlyToLocation center={initialCenter} zoom={defaultZoom} animate={!!hasUserLocation} />}

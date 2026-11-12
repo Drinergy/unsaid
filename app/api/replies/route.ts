@@ -17,6 +17,7 @@ import {
 import { checkContentFilter } from '@/lib/utils/keyword-filter';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { nextReplyDepth, isReplyDepthAllowed } from '@/lib/utils/reply-depth';
+import { pausedResponse } from '@/lib/utils/kill-switch';
 import crypto from 'crypto';
 
 /**
@@ -27,6 +28,8 @@ import crypto from 'crypto';
  * @returns {Promise<NextResponse>} JSON response with created Reply
  */
 export async function POST(request: NextRequest) {
+  const paused = pausedResponse();
+  if (paused) return paused;
   try {
     const body = await request.json();
     const { unsaidId, parentReplyId, content } = body;

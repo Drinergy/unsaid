@@ -83,6 +83,14 @@ types/          shared TypeScript types
 
 - **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. If the user denies location, the browser asks ipapi.co for an approximate place from their IP.
 
+## Running on free tiers (spam and traffic spikes)
+
+- **Map tiles:** MapTiler's free plan allows about 5,000 map sessions a month. The map only loads after a visitor enters, and if MapTiler refuses (quota or bad key) it falls back to plain OpenStreetMap tiles shown dark. That fallback is a stopgap: OpenStreetMap's servers are for light use.
+- **Live updates:** a free Supabase project allows 200 open live connections, so hidden tabs disconnect and reload when they come back.
+- **Reads:** 180 per minute per IP, with short CDN caching on map queries.
+- **Emergency brake:** set `POSTING_PAUSED=1` in Vercel and redeploy to stop new thoughts, replies and reactions (reading and reporting still work).
+- **Clean-up:** `node --env-file=.env.local scripts/moderate.mjs top` shows the busiest posters (hashed IPs); `hide <ip-hash>` / `unhide <ip-hash>` shadow-bans or restores everything from one IP.
+
 ## Deploying
 
 1. Push to GitHub and import the repo in Vercel.

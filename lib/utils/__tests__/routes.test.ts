@@ -115,3 +115,33 @@ describe('allowBurst', () => {
     expect(allowBurst('k', 2, 1000, 1100)).toBe(true);
   });
 });
+
+describe('kill switch (POSTING_PAUSED=1)', () => {
+  it('stops new thoughts, replies and reactions with a 503, but not reading', async () => {
+    process.env.POSTING_PAUSED = '1';
+    try {
+      const unsaids = await import('@/app/api/unsaids/route');
+      const replies = await import('@/app/api/replies/route');
+      const reactions = await import('@/app/api/reactions/route');
+      expect((await unsaids.POST(req('/api/unsaids', { content: 'x', deviceId: DEVICE }))).status).toBe(503);
+      expect((await replies.POST(req('/api/replies', { unsaidId: 'u', content: 'x', deviceId: DEVICE }))).status).toBe(503);
+      expect((await reactions.POST(req('/api/reactions', { unsaidId: 'u', type: null, deviceId: DEVICE }))).status).toBe(503);
+      expect(rpcCalls).toHaveLength(0);
+      expect((await unsaids.GET(req('/api/unsaids?initial=true'))).status).toBe(200);
+    } finally {
+      delete process.env.POSTING_PAUSED;
+    }
+  });
+});
+
+describe('read rate limit', () => {
+  it('answers 429 after 180 reads a minute from one IP', async () => {
+    const { GET } = await import('@/app/api/unsaids/route');
+    for (let i = 0; i < 180; i++) expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'))).status).toBe(200);
+    const blocked = await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'));
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('Retry-After')).toBe('30');
+    // someone else is not affected
+    expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.8'))).status).toBe(200);
+  });
+});

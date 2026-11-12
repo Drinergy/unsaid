@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { getReactionCounts, REACTION_TYPES } from '@/lib/utils/reaction-counts';
 import { allowBurst } from '@/lib/utils/burst-limit';
+import { pausedResponse } from '@/lib/utils/kill-switch';
 import type { ReactionType } from '@/types/unsaid';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -20,6 +21,8 @@ const REACTION_CALLS_PER_MINUTE_PER_IP = 30;
  * type null removes the reaction. Returns fresh counts and this device's reaction.
  */
 export async function POST(request: NextRequest) {
+  const paused = pausedResponse();
+  if (paused) return paused;
   try {
     const body = await request.json();
     const { unsaidId, type } = body;
