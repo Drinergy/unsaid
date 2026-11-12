@@ -114,9 +114,6 @@
     filter: drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8)) drop-shadow(0 0 6px rgba(255, 180, 100, 0.55)) drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
   }
 }
-.unsaid-dot.unsaid-dot--new {
-  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
-}
 /* Soft rings spreading out from it (HTML marker, so transform and opacity can animate) */
 .unsaid-ripple span {
   position: absolute;
@@ -138,7 +135,6 @@
   100% { transform: scale(2.6); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .unsaid-dot.unsaid-dot--new { animation: none; }
   .unsaid-ripple { display: none; }
 }
 
@@ -165,6 +161,10 @@
 }
 .unsaid-dot.marker-fade-in {
   animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
+}
+/* A thought just shared: three classes, so it beats the rule above (same strength would lose by order) */
+.unsaid-dot.marker-fade-in.unsaid-dot--new {
+  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 
 /* Loading skeleton */
@@ -208,6 +208,8 @@
   .glow-light,
   .unsaid-dot,
   .marker-fade-in,
+  .unsaid-dot.marker-fade-in,
+  .unsaid-dot.marker-fade-in.unsaid-dot--new,
   .rise-in {
     animation: none;
   }
