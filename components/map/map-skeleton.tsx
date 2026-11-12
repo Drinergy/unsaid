@@ -17,9 +17,6 @@ export default function MapSkeleton(): React.ReactElement {
       <div className="search-ring" style={{ animationDelay: '2.4s' }} />
       <span className="light-dot breathe absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full" aria-hidden="true" />
 
-      <p className="absolute left-0 right-0 top-[calc(50%+3.5rem)] text-center text-sm text-gray-400 loading-caption">
-        {COPY.mapLoading}
-      </p>
     </div>
   );
 }

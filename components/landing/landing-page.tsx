@@ -84,7 +84,7 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
   }, [enter]);
 
   return (
-    <div className="w-full h-dvh bg-black flex items-center justify-center relative overflow-hidden">
+    <div className="w-full h-dvh bg-black flex items-center justify-center relative overflow-hidden pb-28">
       {/* A flat picture of the world with a few glowing dots (decoration, not real thoughts). It is a static
           file, so people who only look at this page use none of the free map-tile quota. */}
       <Image src="/landing-map.svg" alt="" fill priority unoptimized className="object-cover opacity-60" />
@@ -95,7 +95,7 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
         {/* The logo has a solid black background; a soft round mask hides the square over the map */}
-        <Image src="/logo.png" alt="" width={112} height={112} priority className="mx-auto mb-6 [mask-image:radial-gradient(circle,#000_64%,transparent_71%)]" />
+        <Image src="/logo.png" alt="" width={112} height={112} priority className="mx-auto mb-6 [mask-image:radial-gradient(circle,#000_64%,transparent_71%)] [@media(max-height:700px)]:mb-3 [@media(max-height:700px)]:h-16 [@media(max-height:700px)]:w-16" />
         <h1 className="font-serif text-6xl md:text-8xl font-light text-gray-100 mb-5 tracking-[-0.03em] leading-none">
           Unsaid
         </h1>
@@ -104,7 +104,7 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
           Thoughts left unspoken
         </p>
 
-        <p className="text-base md:text-[17px] leading-relaxed text-gray-400 mb-10 max-w-md mx-auto">
+        <p className="text-base md:text-[17px] leading-relaxed text-gray-400 mb-8 max-w-md mx-auto">
           {COPY.landingBody}
         </p>
 
@@ -112,18 +112,25 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
         <p className="text-xs text-gray-500 mt-2">{COPY.landingLocationNote}</p>
       </div>
 
-      {/* The way on: a quiet label and a bouncing arrow. A real button, so keyboards and screen readers can use it. */}
+      {/* The way on, at the bottom edge where scroll cues belong, apart from the text: a ring (like the logo)
+          with a bouncing arrow in it. A real button, so keyboards and screen readers can use it; scrolling
+          and swiping work too. */}
       <button
         type="button"
         onClick={() => void enter()}
-        className="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-1 rounded-2xl px-6 py-3 text-gray-400 transition-colors hover:text-gray-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
+        className="group absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 rounded-2xl px-6 py-2 text-[rgb(255,214,170)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
         aria-label={COPY.landingDiscover}
       >
-        <span className="text-sm tracking-wide">{COPY.landingDiscover}</span>
-        <svg className="bounce-soft h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.6} d="M6 9l6 6 6-6" />
-        </svg>
+        <span className="text-base tracking-wide">{COPY.landingDiscover}</span>
+        <span className="cue-ring grid h-12 w-12 place-items-center rounded-full border border-[rgba(255,190,120,0.7)] transition-colors group-hover:border-[rgb(255,214,170)]">
+          <svg className="bounce-soft h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 9l6 6 6-6" />
+          </svg>
+        </span>
       </button>
+
+      {/* The next screen peeking up from the bottom edge: the map's own sea color, so it hints that there is more below */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#141414]/90 to-transparent" />
     </div>
   );
 }

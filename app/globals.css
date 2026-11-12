@@ -186,11 +186,23 @@
   animation: search-ring 3.6s ease-out infinite;
 }
 .breathe { animation: glow-breathe 2.4s ease-in-out infinite; }
-@keyframes caption-breathe {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 0.9; }
+/* The way on, on the landing page: a glowing ring with a ring of light spreading out of it, and a bouncing arrow */
+.cue-ring {
+  position: relative;
+  box-shadow: 0 0 18px rgba(255, 170, 90, 0.3), inset 0 0 12px rgba(255, 170, 90, 0.12);
 }
-.loading-caption { animation: caption-breathe 2.4s ease-in-out infinite; }
+.cue-ring::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 190, 120, 0.6);
+  animation: cue-pulse 2.4s ease-out infinite;
+}
+@keyframes cue-pulse {
+  0% { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
 /* The arrow on the landing page: a slow, gentle bounce */
 @keyframes bounce-soft {
   0%, 100% { transform: translateY(0); opacity: 0.55; }
@@ -243,8 +255,8 @@
   .unsaid-dot.marker-fade-in.unsaid-dot--new,
   .search-ring,
   .breathe,
-  .loading-caption,
   .bounce-soft,
+  .cue-ring::after,
   .rise-in {
     animation: none;
   }
