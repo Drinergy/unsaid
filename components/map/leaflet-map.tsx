@@ -6,7 +6,7 @@
 'use client';
 
 import React, { useEffect, useId, useMemo, useState } from 'react';
-import { MapContainer, TileLayer, AttributionControl, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, AttributionControl } from 'react-leaflet';
 import type { LatLngExpression } from 'leaflet';
 import type { Unsaid } from '@/types/unsaid';
 import { USER_LOCATION_ZOOM, DEFAULT_ZOOM, DEFAULT_MAP_CENTER } from '@/lib/constants/geolocation';
@@ -127,7 +127,6 @@ export default function LeafletMap({
 
         {ready && (
           <>
-            <HideMarkersWhileZooming />
             <UnsaidMarkers unsaids={visibleUnsaids} serverClusters={serverClusters} onUnsaidClick={onUnsaidClick} />
           </>
         )}
@@ -152,26 +151,4 @@ export default function LeafletMap({
       </div>
     </div>
   );
-}
-
-/**
- * Leaflet CSS-scales the SVG marker layer during a zoom and only redraws it at the
- * final size afterwards, so dots balloon and then snap back. Hide the layer while
- * zooming (see `.is-zooming` in globals.css) and fade it back in after.
- */
-function HideMarkersWhileZooming(): null {
-  const map = useMap();
-  useEffect(() => {
-    const el = map.getContainer();
-    const start = () => el.classList.add('is-zooming');
-    const end = () => el.classList.remove('is-zooming');
-    map.on('zoomstart', start);
-    map.on('zoomend', end);
-    return () => {
-      map.off('zoomstart', start);
-      map.off('zoomend', end);
-      end();
-    };
-  }, [map]);
-  return null;
 }

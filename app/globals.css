@@ -77,24 +77,11 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Leaflet CircleMarker glow (SVG path): a near-white core with a warm halo, like a street light at night.
-   The halo is a stack of drop-shadows (tight and bright, then wide and soft). */
-.unsaid-dot {
-  filter:
-    drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8))
-    drop-shadow(0 0 6px rgba(255, 180, 100, 0.55))
-    drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
-  transition: opacity 0.3s ease-in-out;
-}
-/* Older thoughts burn dimmer */
-.unsaid-dot--dim {
-  filter:
-    drop-shadow(0 0 1px rgba(255, 236, 200, 0.5))
-    drop-shadow(0 0 4px rgba(255, 180, 100, 0.3))
-    drop-shadow(0 0 9px rgba(255, 150, 70, 0.15));
-}
-/* The same light as a map marker, for dots in the UI (status pill, avatars): near-white core, amber ring, warm halo */
-.light-dot {
+/* The light: a near-white core, an amber ring and a warm halo, like a street light at night. Used by the map
+   markers, the status pill and the avatars. The halo is box-shadow on a plain HTML circle (SVG shapes with CSS
+   filters are not drawn in Safari). Layers: tight and bright, then wide and soft. */
+.light-dot,
+.light-marker {
   background: rgb(255, 244, 227);
   border: 1.5px solid rgba(255, 190, 120, 0.9);
   box-shadow:
@@ -102,17 +89,40 @@
     0 0 6px rgba(255, 180, 100, 0.55),
     0 0 14px rgba(255, 150, 70, 0.28);
 }
+/* The map's markers (HTML icons made in unsaid-markers.tsx) */
+.light-marker-box {
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+}
+.light-marker {
+  display: block;
+  border-radius: 9999px;
+  opacity: var(--o, 1);
+  animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
+}
+/* Older thoughts burn dimmer */
+.light-marker--dim {
+  box-shadow:
+    0 0 1px rgba(255, 236, 200, 0.5),
+    0 0 4px rgba(255, 180, 100, 0.3),
+    0 0 9px rgba(255, 150, 70, 0.15);
+}
 
 /* A thought that was just shared: its light arrives slowly (glow grows from nothing), then breathes like the rest */
 @keyframes light-arrive {
   0% {
     opacity: 0;
-    filter: drop-shadow(0 0 0 rgba(255, 236, 200, 0)) drop-shadow(0 0 0 rgba(255, 180, 100, 0)) drop-shadow(0 0 0 rgba(255, 150, 70, 0));
+    box-shadow: 0 0 0 rgba(255, 236, 200, 0), 0 0 0 rgba(255, 180, 100, 0), 0 0 0 rgba(255, 150, 70, 0);
   }
   100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8)) drop-shadow(0 0 6px rgba(255, 180, 100, 0.55)) drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
+    opacity: var(--o, 1);
+    box-shadow: 0 0 1.5px rgba(255, 236, 200, 0.8), 0 0 6px rgba(255, 180, 100, 0.55), 0 0 14px rgba(255, 150, 70, 0.28);
   }
+}
+.light-marker.light-marker--new {
+  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 /* Soft rings spreading out from it (HTML marker, so transform and opacity can animate) */
 .unsaid-ripple span {
@@ -140,13 +150,11 @@
 
 /* A slow breathing flicker (opacity only: cheap, and no layout or transform side effects) */
 @keyframes glow-breathe {
-  0%, 100% { opacity: 0.82; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: calc(var(--o, 1) * 0.82); }
+  50% { opacity: var(--o, 1); }
 }
 
-/* Fade-in animation for markers */
-/* Opacity only: a transform on an SVG circle scales it from the map origin,
-   which made markers grow and slide whenever they re-rendered on zoom. */
+/* Fade-in for markers and cards (opacity only) */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -154,17 +162,6 @@
   to {
     opacity: 1;
   }
-}
-
-.marker-fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-.unsaid-dot.marker-fade-in {
-  animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
-}
-/* A thought just shared: three classes, so it beats the rule above (same strength would lose by order) */
-.unsaid-dot.marker-fade-in.unsaid-dot--new {
-  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 
 /* Map loading: rings search outward from a light, the caption breathes */
@@ -233,8 +230,8 @@
 
 /* Accessibility: High contrast mode */
 @media (prefers-contrast: high) {
-  .unsaid-dot {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+  .light-marker {
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
   }
   
   .bg-gray-900 {
@@ -249,10 +246,8 @@
 /* Accessibility: Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .glow-light,
-  .unsaid-dot,
-  .marker-fade-in,
-  .unsaid-dot.marker-fade-in,
-  .unsaid-dot.marker-fade-in.unsaid-dot--new,
+  .light-marker,
+  .light-marker.light-marker--new,
   .search-ring,
   .breathe,
   .bounce-soft,
@@ -314,15 +309,6 @@ select:focus-visible {
 /* Fallback OpenStreetMap tiles are a light map: invert them into a dark one */
 .tiles-dark {
   filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.9) saturate(0.4);
-}
-
-/* Hide markers while zooming (Leaflet scales the SVG layer mid-zoom), fade back after */
-.leaflet-overlay-pane {
-  transition: opacity 0.25s ease-out;
-}
-.is-zooming .leaflet-overlay-pane {
-  opacity: 0;
-  transition: opacity 0.1s ease-in;
 }
 
 /* Popup that lists several thoughts sharing one spot */
