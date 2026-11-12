@@ -132,7 +132,7 @@ export default function LeafletMap({
       {ready && viewCount && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none" role="status" aria-live="polite">
           <div className="glass rounded-full h-10 px-4 inline-flex items-center gap-2 text-sm text-gray-200 whitespace-nowrap">
-            <span className="w-2 h-2 rounded-full bg-[rgb(255,214,170)]" aria-hidden="true" />
+            <span className="light-dot w-2.5 h-2.5 rounded-full" aria-hidden="true" />
             {viewCount.count === 0
               ? 'No thoughts in this view yet'
               : `${viewCount.count.toLocaleString()}${viewCount.capped ? '+' : ''} ${viewCount.count === 1 ? 'thought' : 'thoughts'} in view`}

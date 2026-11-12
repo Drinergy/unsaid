@@ -93,6 +93,16 @@
     drop-shadow(0 0 4px rgba(255, 180, 100, 0.3))
     drop-shadow(0 0 9px rgba(255, 150, 70, 0.15));
 }
+/* The same light as a map marker, for dots in the UI (status pill, avatars): near-white core, amber ring, warm halo */
+.light-dot {
+  background: rgb(255, 244, 227);
+  border: 1.5px solid rgba(255, 190, 120, 0.9);
+  box-shadow:
+    0 0 1.5px rgba(255, 236, 200, 0.8),
+    0 0 6px rgba(255, 180, 100, 0.55),
+    0 0 14px rgba(255, 150, 70, 0.28);
+}
+
 /* A slow breathing flicker (opacity only: cheap, and no layout or transform side effects) */
 @keyframes glow-breathe {
   0%, 100% { opacity: 0.82; }
