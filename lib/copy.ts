@@ -40,7 +40,7 @@ export const COPY = {
   couldNotFindPlace: "We couldn't find where you are. You can allow location access, or just look around the world.",
 
   // Landing
-  landingBody: 'Share what you never said. Read what others could not. You are not the only one carrying it.',
+  landingBody: "Read what others could not say. Share yours when you're ready. You are not the only one carrying it.",
   landingButton: 'Come in',
   landingLocating: 'Finding your place…',
   landingSkip: 'Skip, just show me the world',
