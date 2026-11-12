@@ -1,20 +1,16 @@
 /**
- * Shown while the map code and the first tiles load. It is the same picture of the world as the landing
- * page, drifting slowly, with soft rings spreading from the middle, like a light searching for thoughts.
- * Used by the page (while the place is found), the dynamic import fallback and the in-map overlay, so the
- * hand-over between them looks like one continuous loading moment.
+ * Shown while the map code and the first tiles load: the map's own sea colour (#141414), with soft rings
+ * spreading from a light in the middle, like a search. Plain on purpose: any picture of the world would
+ * not line up with the real tiles and would look like a different map popping in. Used by the page (while
+ * the place is found), the dynamic import fallback and the in-map overlay, so they look like one moment.
  */
 
 import React from 'react';
-import Image from 'next/image';
 import { COPY } from '@/lib/copy';
 
 export default function MapSkeleton(): React.ReactElement {
   return (
-    <div role="status" aria-label={COPY.mapLoading} className="absolute inset-0 overflow-hidden bg-[#0b0c10]">
-      <Image src="/landing-map.svg" alt="" fill priority unoptimized className="skeleton-drift object-cover opacity-45" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(0,0,0,0.65))]" />
-
+    <div role="status" aria-label={COPY.mapLoading} className="absolute inset-0 overflow-hidden bg-[#141414]">
       {/* Rings spreading out from a light in the middle */}
       <div className="search-ring" />
       <div className="search-ring" style={{ animationDelay: '1.2s' }} />

@@ -167,12 +167,7 @@
   animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 
-/* Map loading: the world drifts, rings search outward from a light, the caption breathes */
-@keyframes skeleton-drift {
-  from { transform: scale(1.03); }
-  to { transform: scale(1.1); }
-}
-.skeleton-drift { animation: skeleton-drift 18s ease-in-out infinite alternate; }
+/* Map loading: rings search outward from a light, the caption breathes */
 @keyframes search-ring {
   0% { transform: translate(-50%, -50%) scale(0.15); opacity: 0.6; }
   100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
@@ -246,7 +241,6 @@
   .marker-fade-in,
   .unsaid-dot.marker-fade-in,
   .unsaid-dot.marker-fade-in.unsaid-dot--new,
-  .skeleton-drift,
   .search-ring,
   .breathe,
   .loading-caption,

@@ -1,6 +1,7 @@
 // Builds public/landing-map.svg: a dark, flat world map for the landing page backdrop, so the landing page
 // needs no map tiles (the free tile quota is for people who enter the map).
 // The glowing dots are decoration at big cities (not real thoughts), so the backdrop looks alive.
+// Colours are the map's own (MapTiler dataviz-dark: land #292929, sea #141414), so this picture and the real map match.
 // Data: Natural Earth 110m land (public domain). Run: node design/make-landing-map.mjs <land.geojson>
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -33,6 +34,6 @@ const style = '<style>.d{fill:#ffd6aa;filter:url(#g);animation:p 3s ease-in-out 
 const glow = '<defs><filter id="g" x="-300%" y="-300%" width="700%" height="700%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>';
 writeFileSync(
   'public/landing-map.svg',
-  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${height}" preserveAspectRatio="xMidYMid slice">${style}${glow}<path d="${d}" fill="#1a1d24" stroke="#2b303b" stroke-width="1.2" stroke-linejoin="round"/>${dots}</svg>\n`
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${height}" preserveAspectRatio="xMidYMid slice">${style}${glow}<path d="${d}" fill="#292929" stroke="#393939" stroke-width="0.9" stroke-linejoin="round"/>${dots}</svg>\n`
 );
 console.log('public/landing-map.svg', height);
