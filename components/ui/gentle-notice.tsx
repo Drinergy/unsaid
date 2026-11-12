@@ -9,7 +9,7 @@ import { useEffect, useState } from 'react';
 import { COPY } from '@/lib/copy';
 import { SHARED_EVENT, type SharedDetail } from '@/lib/utils/notices';
 
-const SHOW_MS = 7000;
+const SHOW_MS = 15000; // long enough to read it, with the map still moving behind it
 
 export default function GentleNotice(): React.ReactElement | null {
   const [notice, setNotice] = useState<SharedDetail | null>(null);
