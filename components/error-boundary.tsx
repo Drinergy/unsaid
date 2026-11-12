@@ -81,7 +81,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
  * @author CKD
  * @created 2026-01-27
  */
-function MapErrorFallback({ error, reset }: { error: Error | null; reset: () => void }): React.ReactElement {
+function MapErrorFallback({ reset }: { error: Error | null; reset: () => void }): React.ReactElement {
   return (
     <div className="w-full h-full bg-gray-900 flex items-center justify-center">
       <div className="text-center p-8 max-w-md">
