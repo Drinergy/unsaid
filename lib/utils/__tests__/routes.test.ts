@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { BLUR_PRECISION_MULTIPLIER } from '@/lib/constants/geolocation';
 
@@ -113,5 +113,96 @@ describe('allowBurst', () => {
     expect(allowBurst('k', 2, 1000, 10)).toBe(true);
     expect(allowBurst('k', 2, 1000, 20)).toBe(false);
     expect(allowBurst('k', 2, 1000, 1100)).toBe(true);
+  });
+});
+
+describe('kill switch (POSTING_PAUSED=1)', () => {
+  it('stops new thoughts, replies and reactions with a 503, but not reading', async () => {
+    process.env.POSTING_PAUSED = '1';
+    try {
+      const unsaids = await import('@/app/api/unsaids/route');
+      const replies = await import('@/app/api/replies/route');
+      const reactions = await import('@/app/api/reactions/route');
+      expect((await unsaids.POST(req('/api/unsaids', { content: 'x', deviceId: DEVICE }))).status).toBe(503);
+      expect((await replies.POST(req('/api/replies', { unsaidId: 'u', content: 'x', deviceId: DEVICE }))).status).toBe(503);
+      expect((await reactions.POST(req('/api/reactions', { unsaidId: 'u', type: null, deviceId: DEVICE }))).status).toBe(503);
+      expect(rpcCalls).toHaveLength(0);
+      expect((await unsaids.GET(req('/api/unsaids?initial=true'))).status).toBe(200);
+    } finally {
+      delete process.env.POSTING_PAUSED;
+    }
+  });
+});
+
+describe('read rate limit', () => {
+  it('answers 429 after 600 reads a minute from one IP, without needing the hash secret', async () => {
+    delete process.env.ID_HASH_SECRET; // reads must not depend on it
+    const { GET } = await import('@/app/api/unsaids/route');
+    for (let i = 0; i < 600; i++) expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'))).status).toBe(200);
+    const blocked = await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.7'));
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers.get('Retry-After')).toBe('30');
+    // someone else is not affected
+    expect((await GET(req('/api/unsaids?initial=true', undefined, '198.51.100.8'))).status).toBe(200);
+  });
+});
+
+describe('Turnstile bot check', () => {
+  const thought = { content: 'I never told her I was proud of her', deviceId: DEVICE, countryCode: 'PH', location: { lat: 14.6, lng: 120.98 } };
+  const clearToPost = () => (queue.unsaids = [{ count: 0 }, { count: 0 }, { data: null }, { data: [] }]);
+  const cloudflareSays = (success: boolean) => {
+    const fetchMock = vi.fn().mockResolvedValue({ json: () => Promise.resolve({ success }) });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  };
+
+  beforeEach(() => {
+    vi.stubEnv('TURNSTILE_SECRET_KEY', 'test-turnstile-secret');
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it('refuses a post with no token, and never reaches the database or Cloudflare', async () => {
+    const fetchMock = cloudflareSays(true);
+    const { POST } = await import('@/app/api/unsaids/route');
+    const res = await POST(req('/api/unsaids', thought));
+    expect(res.status).toBe(400);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(rpcCalls).toHaveLength(0);
+  });
+
+  it('refuses a token Cloudflare rejects, for thoughts and for replies', async () => {
+    cloudflareSays(false);
+    const unsaids = await import('@/app/api/unsaids/route');
+    const replies = await import('@/app/api/replies/route');
+    expect((await unsaids.POST(req('/api/unsaids', { ...thought, turnstileToken: 'bad' }))).status).toBe(400);
+    expect((await replies.POST(req('/api/replies', { unsaidId: 'u1', content: 'me too, honestly', deviceId: DEVICE, turnstileToken: 'bad' }))).status).toBe(400);
+    expect(rpcCalls).toHaveLength(0);
+  });
+
+  it('accepts a token Cloudflare approves, and sends the secret and token to Cloudflare', async () => {
+    const fetchMock = cloudflareSays(true);
+    const { POST } = await import('@/app/api/unsaids/route');
+    clearToPost();
+    expect((await POST(req('/api/unsaids', { ...thought, turnstileToken: 'good' }))).status).toBe(201);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toContain('challenges.cloudflare.com/turnstile/v0/siteverify');
+    expect(String(init.body)).toContain('response=good');
+  });
+
+  it('refuses everything when Cloudflare cannot be reached', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+    const { POST } = await import('@/app/api/unsaids/route');
+    expect((await POST(req('/api/unsaids', { ...thought, turnstileToken: 'good' }))).status).toBe(400);
+  });
+
+  it('in production, a missing secret refuses posts instead of switching the check off', async () => {
+    vi.unstubAllEnvs();
+    vi.stubEnv('NODE_ENV', 'production');
+    vi.stubEnv('TURNSTILE_SECRET_KEY', '');
+    const { POST } = await import('@/app/api/unsaids/route');
+    expect((await POST(req('/api/unsaids', thought))).status).toBe(400);
   });
 });

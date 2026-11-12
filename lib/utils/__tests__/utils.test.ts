@@ -234,3 +234,49 @@ describe('parseRealtimePoint (what a Realtime event really carries)', () => {
     expect(parseRealtimePoint('not a point')).toBeNull();
   });
 });
+
+describe('content filter: links, contact details and spam', () => {
+  it.each([
+    'check out shop.com for cheap stuff',
+    'Buy at Cheapstuff.com',
+    'SHOP.COM',
+    'Visit Shop.Com now',
+    'visit www . mysite . com',
+    'my site is shop dot com',
+    'buy at shop (dot) me now',
+    'join t.me/channel',
+    'mail me at name (at) gmail',
+    'call me 0917 123 4567 anytime',
+    'dm me on telegram please',
+    'a'.repeat(30),
+    'buy buy buy buy buy buy buy buy buy buy now',
+  ])('blocks: %s', (text) => {
+    expect(checkContentFilter(text).blocked).toBe(true);
+  });
+
+  it.each([
+    "I'm scared that I'm becoming my mother.",
+    'I never told her. Me too, honestly.',
+    'noooooooooooooooo please come back',
+    'I miss her................ so much',
+    'hmmmmmmmmmmmmmmmm',
+    'no no no no no no no, I just want her back',
+    'I miss her.Me and her were close.',
+    'It was 2019, then 2020, then she was gone.',
+    'I wanted to say sorry... but I never did!!!',
+    'Text me when you get home, she said. I never did.',
+  ])('allows: %s', (text) => {
+    expect(checkContentFilter(text).blocked).toBe(false);
+  });
+});
+
+describe('map tile provider (tile-provider.ts)', () => {
+  it('uses MapTiler only when it answers 2xx, and falls back to OpenStreetMap on a bad key or quota', async () => {
+    const { pickTileProvider } = await import('../tile-provider');
+    expect(pickTileProvider(true, 200)).toBe('maptiler');
+    expect(pickTileProvider(true, 403)).toBe('osm'); // bad key or quota used up
+    expect(pickTileProvider(true, 429)).toBe('osm');
+    expect(pickTileProvider(false, null)).toBe('osm'); // no key set
+    expect(pickTileProvider(true, null)).toBe('maptiler'); // probe too slow: try MapTiler anyway
+  });
+});

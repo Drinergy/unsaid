@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceId } from '@/lib/utils/request-identity';
+import { readLimited } from '@/lib/utils/read-limit';
 import { getReactionCounts, getMyReaction } from '@/lib/utils/reaction-counts';
 
 const DEFAULT_REPLY_PAGE = 200;
@@ -27,6 +28,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const limited = readLimited(request);
+    if (limited) return limited;
     const { id } = await params;
 
     // Fetch Unsaid (exclude shadow-banned thoughts)
