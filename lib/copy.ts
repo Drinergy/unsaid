@@ -46,7 +46,7 @@ export const COPY = {
   landingLocationNote: 'Your exact location is never shown.',
 
   // Map
-  mapLoading: 'Looking for thoughts…',
+  mapLoading: 'Finding your place…',
   thoughtsHere: (n: number) => (n === 0 ? 'No thoughts here yet' : n === 1 ? '1 thought here' : `${n.toLocaleString()} thoughts here`),
   clusterHint: 'zoom in',
   groupHint: 'open to read',

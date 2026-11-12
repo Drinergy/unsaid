@@ -13,6 +13,7 @@ import { useMap } from 'react-leaflet';
  * @param {{ lat: number; lng: number }} props.center - Target coordinates
  * @param {number} props.zoom - Target zoom level
  * @param {boolean} props.animate - Whether to animate the transition
+ * @param {boolean} props.enabled - Do nothing until true
  *
  * @author CKD
  * @created 2026-01-27
@@ -21,10 +22,13 @@ export default function FlyToLocation({
   center, 
   zoom,
   animate = true,
+  enabled = true,
 }: { 
   center: { lat: number; lng: number }; 
   zoom: number;
   animate?: boolean;
+  /** Wait until this is true (for example until the loading picture has gone) before moving */
+  enabled?: boolean;
 }): null {
   const map = useMap();
   const has_flown_ref = useRef(false);
@@ -32,7 +36,7 @@ export default function FlyToLocation({
   const max_retries = 10;
 
   useEffect(() => {
-    if (has_flown_ref.current) return;
+    if (!enabled || has_flown_ref.current) return;
 
     const flyToLocation = (): void => {
       try {
@@ -85,7 +89,7 @@ export default function FlyToLocation({
     // Start after a brief delay to ensure map is ready
     const timer = setTimeout(flyToLocation, 150);
     return () => clearTimeout(timer);
-  }, [map, center.lat, center.lng, zoom, animate]);
+  }, [map, center.lat, center.lng, zoom, animate, enabled]);
 
   return null;
 }
