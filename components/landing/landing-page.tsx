@@ -104,9 +104,14 @@ export default function LandingPage({ onEnterMap }: LandingPageProps): React.Rea
   };
 
   return (
-    <div className="w-full h-dvh bg-black/30 backdrop-blur-[2px] flex items-center justify-center relative overflow-hidden">
+    <div className="w-full h-dvh bg-black flex items-center justify-center relative overflow-hidden">
+      {/* A flat picture of the world with a few glowing dots (decoration, not real thoughts). It is a static
+          file, so people who only look at this page use none of the free map-tile quota. */}
+      <Image src="/landing-map.svg" alt="" fill priority unoptimized className="object-cover opacity-60" />
+
       {/* Subtle overlay for better text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/10 to-black/20" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(0,0,0,0.6),transparent_65%)]" />
 
       <div className="relative z-10 max-w-2xl mx-auto px-6 text-center">
         {/* Logo/Title. The logo has a solid black background; a soft round mask hides the square over the map */}
