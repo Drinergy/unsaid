@@ -93,9 +93,9 @@ export default function Home(): React.ReactElement {
    * Handle unsaid creation
    */
   const handleCreateUnsaid = useCallback(async (input: Parameters<typeof createUnsaid>[0]): Promise<void> => {
-    await createUnsaid(input);
+    const created = await createUnsaid(input);
     setShowCreateForm(false);
-    announceShared('thought', input.content, input.countryCode);
+    announceShared('thought', { id: created.id, lat: created.location.lat, lng: created.location.lng });
   }, [createUnsaid]);
 
   /**

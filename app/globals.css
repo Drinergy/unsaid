@@ -103,6 +103,45 @@
     0 0 14px rgba(255, 150, 70, 0.28);
 }
 
+/* A thought that was just shared: its light arrives slowly (glow grows from nothing), then breathes like the rest */
+@keyframes light-arrive {
+  0% {
+    opacity: 0;
+    filter: drop-shadow(0 0 0 rgba(255, 236, 200, 0)) drop-shadow(0 0 0 rgba(255, 180, 100, 0)) drop-shadow(0 0 0 rgba(255, 150, 70, 0));
+  }
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8)) drop-shadow(0 0 6px rgba(255, 180, 100, 0.55)) drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
+  }
+}
+.unsaid-dot.unsaid-dot--new {
+  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
+}
+/* Soft rings spreading out from it (HTML marker, so transform and opacity can animate) */
+.unsaid-ripple span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 56px;
+  height: 56px;
+  margin: -28px 0 0 -28px;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(255, 190, 120, 0.7);
+  box-shadow: 0 0 12px rgba(255, 170, 90, 0.35);
+  opacity: 0;
+  animation: ripple-out 2.8s ease-out 3;
+  pointer-events: none;
+}
+.unsaid-ripple span:nth-child(2) { animation-delay: 1.1s; }
+@keyframes ripple-out {
+  0% { transform: scale(0.15); opacity: 0.8; }
+  100% { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .unsaid-dot.unsaid-dot--new { animation: none; }
+  .unsaid-ripple { display: none; }
+}
+
 /* A slow breathing flicker (opacity only: cheap, and no layout or transform side effects) */
 @keyframes glow-breathe {
   0%, 100% { opacity: 0.82; }

@@ -175,7 +175,7 @@ export default function UnsaidModal({ unsaidId, onClose, onReport }: UnsaidModal
     }
     await fetchUnsaid();
     setReplyingTo(null);
-    announceShared('reply', input.content, place.countryCode);
+    announceShared('reply');
   };
 
   const sendReport = async (target: { unsaidId: string } | { replyId: string }) => {

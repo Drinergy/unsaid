@@ -1,21 +1,18 @@
 /**
- * The quiet moment after someone shares: the form announces it, and the gentle notice (a small card)
- * listens. A window event, so the thread and the composer do not have to pass props up to the page.
+ * The quiet moment after someone shares: the form announces it, and two listeners react: the gentle
+ * notice (a small card) and the map (the new light glows in where it was written). A window event,
+ * so the composer and the thread do not have to pass props up to the page and the map.
  */
-
-import { mentionsSelfHarm } from '@/lib/utils/care-words';
 
 export const SHARED_EVENT = 'unsaid:shared';
 
 export interface SharedDetail {
   kind: 'thought' | 'reply';
-  /** The writer may be in pain: show where to find support */
-  care: boolean;
-  countryCode?: string;
+  /** For a new thought: where its light should appear */
+  thought?: { id: string; lat: number; lng: number };
 }
 
-/** Call after a thought or reply was saved. `text` is only checked here, never sent anywhere. */
-export function announceShared(kind: SharedDetail['kind'], text: string, countryCode?: string): void {
+export function announceShared(kind: SharedDetail['kind'], thought?: SharedDetail['thought']): void {
   if (typeof window === 'undefined') return;
-  window.dispatchEvent(new CustomEvent<SharedDetail>(SHARED_EVENT, { detail: { kind, care: mentionsSelfHarm(text), countryCode } }));
+  window.dispatchEvent(new CustomEvent<SharedDetail>(SHARED_EVENT, { detail: { kind, thought } }));
 }

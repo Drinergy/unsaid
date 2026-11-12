@@ -8,8 +8,8 @@
 
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CircleMarker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { CircleMarker, Marker, Popup, Tooltip, useMap, useMapEvents } from 'react-leaflet';
 import type { LeafletMouseEvent, PathOptions } from 'leaflet';
 import L from 'leaflet';
 import type { Unsaid } from '@/types/unsaid';
@@ -19,6 +19,7 @@ import { clusterRadius, getThoughtsBounds, groupByPixel, type Cluster } from '@/
 import { getOpacityByAge, getThoughtAge, timeAgo } from '@/lib/utils/thought-age';
 import type { ServerClusters } from './use-viewport-data';
 import { COPY } from '@/lib/copy';
+import { SHARED_EVENT, type SharedDetail } from '@/lib/utils/notices';
 
 /** A finger needs about 44px; the glowing dots are only 8 to 12px wide. */
 const TOUCH_HIT_RADIUS = 22;
@@ -77,6 +78,42 @@ function Dot({
   );
 }
 
+/** Two soft rings that spread out from a thought that was just shared (animated in globals.css) */
+const RIPPLE_ICON = L.divIcon({ className: 'unsaid-ripple', html: '<span></span><span></span>', iconSize: [0, 0] });
+const FRESH_MS = 8000;
+
+/**
+ * The light someone just wrote: fly there, and let it glow in slowly with soft ripples, so they can
+ * see their words arrive. Skips the flight for people who asked for less motion.
+ */
+function useFreshThought(): { id: string; lat: number; lng: number } | null {
+  const map = useMap();
+  const [fresh, setFresh] = useState<{ id: string; lat: number; lng: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    const onShared = (e: Event) => {
+      const thought = (e as CustomEvent<SharedDetail>).detail.thought;
+      if (!thought) return;
+      setFresh(thought);
+      if (timer.current) clearTimeout(timer.current);
+      timer.current = setTimeout(() => setFresh(null), FRESH_MS);
+
+      // Close enough to show single lights (they are grouped into counts when zoomed out)
+      const zoom = Math.max(map.getZoom(), CLUSTER_ZOOM_THRESHOLD);
+      const calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      map.flyTo([thought.lat, thought.lng], zoom, { animate: !calm, duration: 1.8 });
+    };
+    window.addEventListener(SHARED_EVENT, onShared);
+    return () => {
+      window.removeEventListener(SHARED_EVENT, onShared);
+      if (timer.current) clearTimeout(timer.current);
+    };
+  }, [map]);
+
+  return fresh;
+}
+
 export default function UnsaidMarkers({
   unsaids,
   serverClusters,
@@ -88,6 +125,7 @@ export default function UnsaidMarkers({
 }): React.ReactElement {
   const map = useMap();
   const coarse = useCoarsePointer();
+  const fresh = useFreshThought();
 
   // Start from the map's real zoom (the default would briefly cluster a whole country into one dot)
   const [zoom, setZoom] = useState(() => map.getZoom());
@@ -192,12 +230,14 @@ export default function UnsaidMarkers({
             }
           />
         ))}
+        {fresh && <Marker position={[fresh.lat, fresh.lng]} icon={RIPPLE_ICON} interactive={false} keyboard={false} zIndexOffset={-200} />}
       </>
     );
   }
 
   return (
     <>
+      {fresh && <Marker position={[fresh.lat, fresh.lng]} icon={RIPPLE_ICON} interactive={false} keyboard={false} zIndexOffset={-200} />}
       {groups.map((group) => {
         if (group.length > 1) {
           const center = {
@@ -249,7 +289,7 @@ export default function UnsaidMarkers({
             center={[unsaid.location.lat, unsaid.location.lng]}
             radius={age.isRecent ? 5 : 4}
             pathOptions={{
-              className: `unsaid-dot marker-fade-in${opacity < 0.6 ? ' unsaid-dot--dim' : ''}`,
+              className: `unsaid-dot marker-fade-in${opacity < 0.6 ? ' unsaid-dot--dim' : ''}${fresh?.id === unsaid.id ? ' unsaid-dot--new' : ''}`,
               color: `rgba(255, 190, 120, ${0.9 * opacity})`,
               weight: 1.5,
               fillColor: 'rgb(255, 244, 227)',

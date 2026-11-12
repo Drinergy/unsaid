@@ -1,6 +1,5 @@
 /**
- * A small card that appears after someone shares a thought or a reply: a quiet "it's out there now",
- * and, if their words suggest they are hurting, where to find support (it stays until closed).
+ * A small card that appears after someone shares a thought or a reply: a quiet "it's out there now".
  */
 
 'use client';
@@ -20,17 +19,13 @@ export default function GentleNotice(): React.ReactElement | null {
     return () => window.removeEventListener(SHARED_EVENT, onShared);
   }, []);
 
-  // A plain "shared" card fades away by itself; the support card waits until it is closed
   useEffect(() => {
-    if (!notice || notice.care) return;
+    if (!notice) return;
     const timer = setTimeout(() => setNotice(null), SHOW_MS);
     return () => clearTimeout(timer);
   }, [notice]);
 
   if (!notice) return null;
-
-  const message = notice.kind === 'thought' ? COPY.sharedThought : COPY.sentReply;
-  const isPh = notice.countryCode === 'PH';
 
   return (
     <div
@@ -41,33 +36,14 @@ export default function GentleNotice(): React.ReactElement | null {
     >
       <div className="flex items-start gap-3">
         <span className="light-dot mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" aria-hidden="true" />
-        <div className="min-w-0 flex-1 text-sm leading-relaxed text-gray-200">
-          {notice.care ? (
-            <>
-              <p className="font-serif text-base text-gray-100">{COPY.careTitle}</p>
-              <p className="mt-1">{COPY.careBody}</p>
-              <p className="mt-2">
-                <a
-                  href={isPh ? 'https://findahelpline.com/countries/ph' : 'https://findahelpline.com'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[rgb(255,214,170)] underline underline-offset-2"
-                >
-                  {COPY.careFind}
-                </a>
-              </p>
-              {isPh && <p className="mt-1">{COPY.carePh}</p>}
-              <p className="mt-3 text-xs text-gray-400">{message}</p>
-            </>
-          ) : (
-            <p>{message}</p>
-          )}
-        </div>
+        <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-200">
+          {notice.kind === 'thought' ? COPY.sharedThought : COPY.sentReply}
+        </p>
         <button
           type="button"
           onClick={() => setNotice(null)}
           className="ctl -mr-2 -mt-2 grid h-11 w-11 shrink-0 place-items-center rounded-full border border-transparent text-gray-400"
-          aria-label={COPY.careDismiss}
+          aria-label={COPY.dismiss}
         >
           <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

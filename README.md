@@ -66,7 +66,7 @@ alter publication supabase_realtime add table unsaids, replies;
 
 ## Voice
 
-Every sentence people read lives in `lib/copy.ts`: warm, short, never blaming. One vocabulary: *Unsaid* is the app's name; what people write is a **thought** (they write it and share it); an answer is a **reply**. A test keeps cold words ("failed", "invalid", "spam") and the word "unsaid" out of those sentences. After someone shares, a quiet notice appears; if their words suggest they are hurting (`lib/utils/care-words.ts`, English and Filipino), it shows where to find support. It never blocks or changes a post.
+Every sentence people read lives in `lib/copy.ts`: warm, short, never blaming. One vocabulary: *Unsaid* is the app's name; what people write is a **thought** (they write it and share it); an answer is a **reply**. A test keeps cold words ("failed", "invalid", "spam") and the word "unsaid" out of those sentences. After someone shares, a quiet notice appears and the new light glows in on the map where it was written.
 
 ## Project structure
 

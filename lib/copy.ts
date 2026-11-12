@@ -84,9 +84,5 @@ export const COPY = {
   // After sharing
   sharedThought: 'Your thought is out there now. Someone may find it right when they need it.',
   sentReply: 'Your reply was sent. Thank you for being kind.',
-  careTitle: "You're not alone.",
-  careBody: "If you're thinking about hurting yourself, please reach out to someone now. You deserve support.",
-  careFind: 'Find a helpline in your country',
-  carePh: 'In the Philippines: NCMH Crisis Hotline 1553 (24/7), or 0917-899-8727.',
-  careDismiss: 'Close',
+  dismiss: 'Close',
 } as const;

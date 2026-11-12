@@ -281,33 +281,6 @@ describe('map tile provider (tile-provider.ts)', () => {
   });
 });
 
-describe('care words (care-words.ts)', () => {
-  it.each([
-    'I want to die',
-    "I don't want to live anymore",
-    'sometimes I think about killing myself',
-    'I keep hurting myself',
-    'suicidal thoughts again tonight',
-    'gusto ko nang mamatay',
-    'ayoko nang mabuhay',
-    'magpakamatay na lang ako',
-  ])('notices: %s', async (text) => {
-    const { mentionsSelfHarm } = await import('../care-words');
-    expect(mentionsSelfHarm(text)).toBe(true);
-  });
-
-  it.each([
-    "I'm scared that I'm becoming my mother.",
-    'I never told her I was proud of her.',
-    'I was dying to see her again',
-    'my phone died and I never called back',
-    'I want to live somewhere quiet',
-  ])('stays quiet: %s', async (text) => {
-    const { mentionsSelfHarm } = await import('../care-words');
-    expect(mentionsSelfHarm(text)).toBe(false);
-  });
-});
-
 describe('copy (copy.ts): one vocabulary, a kind voice', () => {
   it('never calls what people write an "unsaid", and never uses cold system words', async () => {
     const { COPY, MAX_THOUGHT_NOTE } = await import('../../copy');
