@@ -77,19 +77,19 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* The light: a near-white core, an amber ring and a warm halo, like a street light at night. Used by the map
-   markers, the status pill and the avatars. The halo is box-shadow on a plain HTML circle (SVG shapes with CSS
-   filters are not drawn in Safari). Layers: tight and bright, then wide and soft. */
-.light-dot,
-.light-marker {
-  background: rgb(255, 244, 227);
-  border: 1.5px solid rgba(255, 190, 120, 0.9);
+/* The light: a warm cream core with a wide, soft, orange halo that fades smoothly into the dark, like a street
+   light or a lantern at night. The halo is box-shadow on a plain HTML circle (SVG shapes with CSS filters are
+   not drawn in Safari). */
+.light-dot {
+  /* Small dots in the interface (status pill, avatars): the same look, scaled down */
+  background: radial-gradient(circle, #fff8e6 0%, #ffe9bd 60%, #ffd699 100%);
   box-shadow:
-    0 0 1.5px rgba(255, 236, 200, 0.8),
-    0 0 6px rgba(255, 180, 100, 0.55),
-    0 0 14px rgba(255, 150, 70, 0.28);
+    0 0 3px rgba(255, 214, 150, 0.9),
+    0 0 8px 2px rgba(255, 170, 90, 0.5),
+    0 0 16px 4px rgba(255, 140, 60, 0.25);
 }
-/* The map's markers (HTML icons made in unsaid-markers.tsx) */
+/* The map's markers (HTML icons made in unsaid-markers.tsx). Sizes are in em, and the icon sets its font-size to
+   its own width, so the halo is the same shape on a small dot and on a big cluster. */
 .light-marker-box {
   display: grid;
   place-items: center;
@@ -97,28 +97,40 @@
   border: none;
 }
 .light-marker {
+  --glow:
+    0 0 0.45em 0.08em rgba(255, 214, 150, 0.9),
+    0 0 1.2em 0.3em rgba(255, 170, 90, 0.55),
+    0 0 2.6em 0.75em rgba(255, 140, 60, 0.28),
+    0 0 4.6em 1.4em rgba(255, 120, 40, 0.12);
   display: block;
   border-radius: 9999px;
+  background: radial-gradient(circle, #fff8e6 0%, #ffe9bd 60%, #ffd699 100%);
+  box-shadow: var(--glow);
   opacity: var(--o, 1);
   animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
 }
 /* Older thoughts burn dimmer */
 .light-marker--dim {
-  box-shadow:
-    0 0 1px rgba(255, 236, 200, 0.5),
-    0 0 4px rgba(255, 180, 100, 0.3),
-    0 0 9px rgba(255, 150, 70, 0.15);
+  --glow:
+    0 0 0.4em 0.05em rgba(255, 214, 150, 0.55),
+    0 0 1em 0.2em rgba(255, 170, 90, 0.3),
+    0 0 2.2em 0.5em rgba(255, 140, 60, 0.14),
+    0 0 3.8em 1em rgba(255, 120, 40, 0.06);
 }
 
-/* A thought that was just shared: its light arrives slowly (glow grows from nothing), then breathes like the rest */
+/* A thought that was just shared: its light arrives slowly (the halo grows from nothing), then breathes like the rest */
 @keyframes light-arrive {
   0% {
     opacity: 0;
-    box-shadow: 0 0 0 rgba(255, 236, 200, 0), 0 0 0 rgba(255, 180, 100, 0), 0 0 0 rgba(255, 150, 70, 0);
+    box-shadow:
+      0 0 0 0 rgba(255, 214, 150, 0),
+      0 0 0 0 rgba(255, 170, 90, 0),
+      0 0 0 0 rgba(255, 140, 60, 0),
+      0 0 0 0 rgba(255, 120, 40, 0);
   }
   100% {
     opacity: var(--o, 1);
-    box-shadow: 0 0 1.5px rgba(255, 236, 200, 0.8), 0 0 6px rgba(255, 180, 100, 0.55), 0 0 14px rgba(255, 150, 70, 0.28);
+    box-shadow: var(--glow);
   }
 }
 .light-marker.light-marker--new {
@@ -231,7 +243,7 @@
 /* Accessibility: High contrast mode */
 @media (prefers-contrast: high) {
   .light-marker {
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    --glow: 0 0 0.8em 0.2em rgba(255, 255, 255, 0.8);
   }
   
   .bg-gray-900 {

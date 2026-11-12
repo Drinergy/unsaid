@@ -47,10 +47,10 @@ function dotIcon(radius: number, hit: number, extraClass: string, opacity: numbe
   const key = `${box}|${radius}|${extraClass}|${opacity}`;
   let icon = iconCache.get(key);
   if (!icon) {
-    const size = radius * 2 + 3;
+    const size = radius * 2 + 2;
     icon = L.divIcon({
       className: 'light-marker-box',
-      html: `<span class="light-marker ${extraClass}" style="width:${size}px;height:${size}px;--o:${opacity}"></span>`,
+      html: `<span class="light-marker ${extraClass}" style="width:${size}px;height:${size}px;font-size:${size}px;--o:${opacity}"></span>`,
       iconSize: [box, box],
       iconAnchor: [box / 2, box / 2],
     });
