@@ -246,7 +246,7 @@ export default function UnsaidMarkers({
             key={unsaid.id}
             coarse={coarse}
             center={[unsaid.location.lat, unsaid.location.lng]}
-            radius={age.isRecent ? 6 : 5}
+            radius={age.isRecent ? 5 : 4}
             pathOptions={{
               className: `unsaid-dot marker-fade-in${opacity < 0.6 ? ' unsaid-dot--dim' : ''}`,
               color: `rgba(255, 190, 120, ${0.9 * opacity})`,
