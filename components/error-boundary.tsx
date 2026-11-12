@@ -10,6 +10,7 @@
 'use client';
 
 import React from 'react';
+import { COPY } from '@/lib/copy';
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -55,15 +56,15 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
       return (
         <div className="min-h-screen bg-black flex items-center justify-center p-4">
           <div className="bg-gray-900 rounded-lg p-8 max-w-md text-center border border-gray-800">
-            <h1 className="text-2xl font-light text-gray-100 mb-4">Something went wrong</h1>
+            <h1 className="text-2xl font-light text-gray-100 mb-4">{COPY.errorTitle}</h1>
             <p className="text-gray-400 mb-6">
-              We encountered an error. Please refresh the page or try again later.
+              {COPY.errorBody}
             </p>
             <button
               onClick={this.reset}
               className="px-6 py-2 bg-gray-700 text-gray-200 rounded hover:bg-gray-600 transition-colors"
             >
-              Try Again
+              {COPY.tryAgain}
             </button>
           </div>
         </div>
@@ -99,15 +100,15 @@ function MapErrorFallback({ error, reset }: { error: Error | null; reset: () => 
             />
           </svg>
         </div>
-        <h2 className="text-xl font-light text-gray-100 mb-2">Map failed to load</h2>
+        <h2 className="text-xl font-light text-gray-100 mb-2">{COPY.mapErrorTitle}</h2>
         <p className="text-gray-400 text-sm mb-6">
-          {error?.message || 'There was a problem loading the map. Please try again.'}
+          {COPY.mapErrorBody}
         </p>
         <button
           onClick={reset}
           className="px-6 py-2 bg-gray-700 text-gray-200 rounded hover:bg-gray-600 transition-colors"
         >
-          Reload Map
+          {COPY.tryAgain}
         </button>
       </div>
     </div>

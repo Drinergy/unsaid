@@ -21,6 +21,7 @@ import { clusterCellSize } from '@/lib/utils/clustering';
 import { CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocation';
 import { readLimited } from '@/lib/utils/read-limit';
 import { pausedResponse } from '@/lib/utils/kill-switch';
+import { COPY } from '@/lib/copy';
 import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
 
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
     if (bbox && !initial) {
       const parsed = bbox.split(',').map(Number);
       if (parsed.length !== 4 || !parsed.every(Number.isFinite)) {
-        return NextResponse.json({ error: 'Invalid bbox' }, { status: 400 });
+        return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
       }
       // Snap zoom and box edges to whole grid cells so near-identical requests share one CDN entry
       // (a caller cannot dodge the cache by changing the last decimal)
@@ -95,7 +96,7 @@ export async function GET(request: NextRequest) {
         });
         if (clusterError) {
           console.error('Error fetching clusters:', clusterError);
-          return NextResponse.json({ error: 'Failed to fetch clusters' }, { status: 500 });
+          return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
         }
         const clusters = (rows || []).map((r) => ({
           lat: r.lat,
@@ -140,7 +141,7 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching unsaids:', error);
-      return NextResponse.json({ error: 'Failed to fetch unsaids' }, { status: 500 });
+      return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
     }
 
     const unsaids = toUnsaids(data || []);
@@ -148,7 +149,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ unsaids });
   } catch (error) {
     console.error('Unexpected error in GET /api/unsaids:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
   }
 }
 
@@ -175,13 +176,13 @@ export async function POST(request: NextRequest) {
     // Hashed identifiers: raw device id / IP are never stored
     const deviceId = hashDeviceId(body.deviceId);
     if (!deviceId) {
-      return NextResponse.json({ error: 'Invalid device id' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     const ipAddress = hashRequestIp(request);
 
     // Validate content
     if (typeof content !== 'string') {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+      return NextResponse.json({ error: COPY.emptyContent }, { status: 400 });
     }
     const validation = validateUnsaid(content);
     if (!validation.valid) {
@@ -202,13 +203,13 @@ export async function POST(request: NextRequest) {
       !Number.isFinite(lat) || !Number.isFinite(lng) ||
       Math.abs(lat) > 90 || Math.abs(lng) > 180
     ) {
-      return NextResponse.json({ error: 'Invalid location' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     if (typeof countryCode !== 'string' || !/^[A-Za-z]{2}$/.test(countryCode)) {
-      return NextResponse.json({ error: 'Invalid country code' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     if (city != null && (typeof city !== 'string' || city.length > 100)) {
-      return NextResponse.json({ error: 'Invalid city' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     const location = { lat: roundCoordinate(lat), lng: roundCoordinate(lng) };
 
@@ -217,7 +218,7 @@ export async function POST(request: NextRequest) {
     if (!deviceLimit.allowed) {
       return NextResponse.json(
         {
-          error: 'Rate limit exceeded',
+          error: COPY.dailyLimit,
           remaining: deviceLimit.remaining,
           resetAt: deviceLimit.resetAt,
         },
@@ -229,7 +230,7 @@ export async function POST(request: NextRequest) {
     if (!ipLimit.allowed) {
       return NextResponse.json(
         {
-          error: 'Rate limit exceeded',
+          error: COPY.networkBusy,
           remaining: ipLimit.remaining,
         },
         { status: 429 }
@@ -240,7 +241,7 @@ export async function POST(request: NextRequest) {
     if (!timeThrottle.allowed) {
       return NextResponse.json(
         {
-          error: 'Please wait before posting again',
+          error: COPY.throttleThought,
           waitSeconds: timeThrottle.waitSeconds,
         },
         { status: 429 }
@@ -261,7 +262,7 @@ export async function POST(request: NextRequest) {
 
     if (duplicates && duplicates.length >= 5) {
       return NextResponse.json(
-        { error: 'Similar content was recently posted' },
+        { error: COPY.repeatedThought },
         { status: 400 }
       );
     }
@@ -285,7 +286,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError || !unsaid) {
       console.error('Error creating unsaid:', insertError);
-      return NextResponse.json({ error: 'Failed to create unsaid' }, { status: 500 });
+      return NextResponse.json({ error: COPY.couldNotShare }, { status: 500 });
     }
 
 
@@ -320,6 +321,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Unexpected error in POST /api/unsaids:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
   }
 }

@@ -18,6 +18,7 @@ import { checkContentFilter } from '@/lib/utils/keyword-filter';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { nextReplyDepth, isReplyDepthAllowed } from '@/lib/utils/reply-depth';
 import { pausedResponse } from '@/lib/utils/kill-switch';
+import { COPY } from '@/lib/copy';
 import { verifyTurnstile, TURNSTILE_FAILED } from '@/lib/utils/turnstile';
 import crypto from 'crypto';
 
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const deviceId = hashDeviceId(body.deviceId);
     if (!deviceId) {
-      return NextResponse.json({ error: 'Invalid device id' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     const ipAddress = hashRequestIp(request);
 
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Validate content
     if (typeof content !== 'string') {
-      return NextResponse.json({ error: 'Content is required' }, { status: 400 });
+      return NextResponse.json({ error: COPY.emptyContent }, { status: 400 });
     }
     const validation = validateReply(content);
     if (!validation.valid) {
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (unsaidError || !unsaid) {
-      return NextResponse.json({ error: 'Unsaid not found' }, { status: 404 });
+      return NextResponse.json({ error: COPY.thoughtGone }, { status: 404 });
     }
 
     // If parent reply specified, verify it exists
@@ -92,18 +93,18 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (parentError || !parentReply) {
-        return NextResponse.json({ error: 'Parent reply not found' }, { status: 404 });
+        return NextResponse.json({ error: COPY.replyGone }, { status: 404 });
       }
 
       // Verify parent reply belongs to same Unsaid
       if (parentReply.unsaid_id !== unsaidId) {
-        return NextResponse.json({ error: 'Invalid parent reply' }, { status: 400 });
+        return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
       }
 
       // Cap thread depth. The parent row already knows its depth, so no need to read the thread.
       replyDepth = nextReplyDepth(parentReply.depth);
       if (!isReplyDepthAllowed(replyDepth)) {
-        return NextResponse.json({ error: 'This thread is too deep to reply to' }, { status: 400 });
+        return NextResponse.json({ error: COPY.tooDeep }, { status: 400 });
       }
     }
 
@@ -112,7 +113,7 @@ export async function POST(request: NextRequest) {
     if (!deviceLimit.allowed) {
       return NextResponse.json(
         {
-          error: 'Rate limit exceeded',
+          error: COPY.dailyLimit,
           remaining: deviceLimit.remaining,
           resetAt: deviceLimit.resetAt,
         },
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     if (!ipLimit.allowed) {
       return NextResponse.json(
         {
-          error: 'Rate limit exceeded',
+          error: COPY.networkBusy,
           remaining: ipLimit.remaining,
         },
         { status: 429 }
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
     if (!timeThrottle.allowed) {
       return NextResponse.json(
         {
-          error: 'Please wait before replying again',
+          error: COPY.throttleReply,
           waitSeconds: timeThrottle.waitSeconds,
         },
         { status: 429 }
@@ -154,7 +155,7 @@ export async function POST(request: NextRequest) {
       .gte('created_at', new Date(Date.now() - 3_600_000).toISOString())
       .limit(5);
     if (duplicates && duplicates.length >= 5) {
-      return NextResponse.json({ error: 'Similar reply was recently posted' }, { status: 400 });
+      return NextResponse.json({ error: COPY.repeatedReply }, { status: 400 });
     }
 
     // Insert Reply
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Error creating reply:', insertError);
-      return NextResponse.json({ error: 'Failed to create reply' }, { status: 500 });
+      return NextResponse.json({ error: COPY.couldNotReply }, { status: 500 });
     }
 
 
@@ -196,6 +197,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error('Unexpected error in POST /api/replies:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
   }
 }

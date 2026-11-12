@@ -18,6 +18,7 @@ import { NODE_OPEN_ZOOM, CLUSTER_ZOOM_THRESHOLD } from '@/lib/constants/geolocat
 import { clusterRadius, getThoughtsBounds, groupByPixel, type Cluster } from '@/lib/utils/clustering';
 import { getOpacityByAge, getThoughtAge, timeAgo } from '@/lib/utils/thought-age';
 import type { ServerClusters } from './use-viewport-data';
+import { COPY } from '@/lib/copy';
 
 /** A finger needs about 44px; the glowing dots are only 8 to 12px wide. */
 const TOUCH_HIT_RADIUS = 22;
@@ -185,7 +186,7 @@ export default function UnsaidMarkers({
               ) : (
                 <div className="whitespace-nowrap">
                   <span className="font-semibold">{cluster.count.toLocaleString()} thoughts</span>
-                  <span className="text-gray-400"> · click to zoom in</span>
+                  <span className="text-gray-400"> · {COPY.clusterHint}</span>
                 </div>
               )
             }
@@ -227,7 +228,7 @@ export default function UnsaidMarkers({
               tooltip={
                 <div className="whitespace-nowrap">
                   <span className="font-semibold">{group.length} thoughts here</span>
-                  <span className="text-gray-400"> · click to browse</span>
+                  <span className="text-gray-400"> · {COPY.groupHint}</span>
                 </div>
               }
             />

@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceId } from '@/lib/utils/request-identity';
 import { readLimited } from '@/lib/utils/read-limit';
+import { COPY } from '@/lib/copy';
 import { getReactionCounts, getMyReaction } from '@/lib/utils/reaction-counts';
 
 const DEFAULT_REPLY_PAGE = 200;
@@ -41,7 +42,7 @@ export async function GET(
       .single();
 
     if (unsaidError || !unsaid) {
-      return NextResponse.json({ error: 'Unsaid not found' }, { status: 404 });
+      return NextResponse.json({ error: COPY.thoughtGone }, { status: 404 });
     }
 
     // Type assertion for unsaid data
@@ -57,7 +58,7 @@ export async function GET(
 
     // Double-check: if somehow is_shadow_banned is true, return 404
     if (unsaidData.is_shadow_banned) {
-      return NextResponse.json({ error: 'Unsaid not found' }, { status: 404 });
+      return NextResponse.json({ error: COPY.thoughtGone }, { status: 404 });
     }
 
     // Replies: a bounded, oldest-first page (the client builds the tree and asks for more)
@@ -121,6 +122,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Unexpected error in GET /api/unsaids/[id]:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
   }
 }

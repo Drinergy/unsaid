@@ -7,6 +7,8 @@
  * @created 2026-01-23
  */
 
+import { COPY, MAX_THOUGHT_NOTE } from '@/lib/copy';
+
 const MIN_LENGTH_REPLY = 1; // Reply: non-empty only
 const MAX_LENGTH_UNSAID = 1000;
 const MAX_LENGTH_REPLY = 500;
@@ -28,14 +30,14 @@ function validateLength(
   if (trimmed.length < minLength) {
     return {
       valid: false,
-      error: minLength === 1 ? 'Content cannot be empty' : `Content must be at least ${minLength} characters`,
+      error: minLength === 1 ? COPY.emptyContent : `Please write at least ${minLength} characters.`,
     };
   }
 
   if (trimmed.length > maxLength) {
     return {
       valid: false,
-      error: `Content must be no more than ${maxLength} characters`,
+      error: MAX_THOUGHT_NOTE(maxLength),
     };
   }
 

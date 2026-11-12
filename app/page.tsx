@@ -23,6 +23,9 @@ import { useAppShortcuts } from '@/lib/hooks/use-keyboard-shortcuts';
 import { getDeviceId } from '@/lib/utils/device-id';
 import { USER_LOCATION_ZOOM, DEFAULT_ZOOM } from '@/lib/constants/geolocation';
 import type { Unsaid } from '@/types/unsaid';
+import { COPY } from '@/lib/copy';
+import GentleNotice from '@/components/ui/gentle-notice';
+import { announceShared } from '@/lib/utils/notices';
 
 /**
  * Home page - main entry point for the Unsaid application
@@ -92,6 +95,7 @@ export default function Home(): React.ReactElement {
   const handleCreateUnsaid = useCallback(async (input: Parameters<typeof createUnsaid>[0]): Promise<void> => {
     await createUnsaid(input);
     setShowCreateForm(false);
+    announceShared('thought', input.content, input.countryCode);
   }, [createUnsaid]);
 
   /**
@@ -156,6 +160,9 @@ export default function Home(): React.ReactElement {
             }}
           />
 
+          {/* The quiet moment after sharing */}
+          <GentleNotice />
+
           {/* Daily thought overlay */}
           <DailyThoughtOverlay unsaids={unsaids} onUnsaidClick={handleUnsaidClick} />
 
@@ -191,8 +198,8 @@ function FloatingActions({
       <button
         onClick={onSavedClick}
         className="glass ctl fixed z-[10000] top-[4.5rem] right-3 sm:top-auto sm:bottom-[6.75rem] sm:right-8 rounded-full w-12 h-12 grid place-items-center"
-        aria-label="Saved thoughts"
-        title="Saved thoughts (Ctrl+S)"
+        aria-label={COPY.savedThoughts}
+        title={`${COPY.savedThoughts} (Ctrl+S)`}
       >
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
@@ -201,8 +208,8 @@ function FloatingActions({
       <button
         onClick={onCreateClick}
         className="ctl-primary fixed z-[10000] bottom-[calc(0.75rem+env(safe-area-inset-bottom))] right-3 sm:bottom-8 sm:right-8 rounded-full w-14 h-14 sm:w-16 sm:h-16 grid place-items-center"
-        aria-label="Create new Unsaid"
-        title="Create new Unsaid (C)"
+        aria-label={COPY.writeThought}
+        title={`${COPY.writeThought} (C)`}
       >
         <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
