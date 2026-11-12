@@ -28,6 +28,10 @@
   z-index: 999 !important;
 }
 
+/* One 12px gutter for every floating control, so the corner buttons line up (Leaflet's default is 10px) */
+.leaflet-top .leaflet-control { margin-top: 12px; }
+.leaflet-right .leaflet-control { margin-right: 12px; }
+
 /* Custom map controls styling */
 /* (Hover/press feedback and the focus ring live in .ctl; the old rule that removed the
    outline hid keyboard focus on the My Location button.) */

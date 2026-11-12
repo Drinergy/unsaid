@@ -71,7 +71,7 @@ export default function MapControls({ userLocation }: MapControlsProps) {
   }
 
   return (
-    <div className="leaflet-top leaflet-right" style={{ marginTop: '10px', marginRight: '10px', zIndex: 1000 }}>
+    <div className="leaflet-top leaflet-right" style={{ zIndex: 1000 }}>
       {/* No `leaflet-bar`: it adds Leaflet's own 2px square border around the pill */}
       <div className="leaflet-control">
         <button
@@ -80,7 +80,7 @@ export default function MapControls({ userLocation }: MapControlsProps) {
             e.stopPropagation();
             void handlePress();
           }}
-          className="glass ctl rounded-full h-11 min-w-11 px-3 sm:px-4 cursor-pointer inline-flex items-center justify-center gap-2 font-medium text-sm"
+          className="glass ctl rounded-full h-12 min-w-12 px-3 sm:px-4 cursor-pointer inline-flex items-center justify-center gap-2 font-medium text-sm"
           aria-label="Go to my location"
           title="My location: zoom in or out"
           type="button"
