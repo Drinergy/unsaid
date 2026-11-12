@@ -122,11 +122,22 @@ export async function getCountryCode(lat: number, lng: number): Promise<string |
   }
 }
 
+/** True if the person already said yes to location (no popup will appear). Unknown (for example in Safari) counts as no. */
+async function deviceAlreadyAllowed(): Promise<boolean> {
+  try {
+    const status = await navigator.permissions?.query({ name: 'geolocation' as PermissionName });
+    return status?.state === 'granted';
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Get user's location via browser geolocation (primary - more accurate)
- * Falls back to IP-based geolocation if browser geolocation fails
+ * Get user's location. With `preferBrowser` it asks the device (a permission popup may appear, so call it
+ * from a tap or a submit). Without it, it asks the device only if the person already allowed it, and
+ * otherwise falls back to the network guess (marked `approximate`).
  *
- * @param {boolean} preferBrowser - If true, prioritize browser geolocation (requires user gesture in Safari)
+ * @param {boolean} preferBrowser - If true, ask the device even if permission was not given yet
  * @returns {Promise<{ lat: number; lng: number; city?: string; countryCode?: string }>}
  */
 export async function getUserLocation(preferBrowser: boolean = false): Promise<{
@@ -134,10 +145,13 @@ export async function getUserLocation(preferBrowser: boolean = false): Promise<{
   lng: number;
   city?: string;
   countryCode?: string;
+  /** True when the place came from the network (IP), not from the device */
+  approximate?: boolean;
 }> {
-  // Always try browser geolocation first if available (more accurate)
-  // This will trigger the permission popup in Safari
-  if (navigator.geolocation) {
+  // The device's own position is only asked for when the caller says so (a tap, a share), or when the
+  // person already allowed it. Otherwise this is silent and uses the network guess, so opening the map or
+  // focusing a reply box never throws a permission popup at someone.
+  if (navigator.geolocation && (preferBrowser || (await deviceAlreadyAllowed()))) {
     try {
       // Check permission status for logging (but don't block if it says denied - Safari Permissions API can be unreliable)
       let permissionStatus: PermissionStatus | null = null;
@@ -244,7 +258,7 @@ export async function getUserLocation(preferBrowser: boolean = false): Promise<{
   try {
     const ipLocation = await getLocationFromIP();
     if (ipLocation.lat !== 0 && ipLocation.lng !== 0) {
-      return ipLocation;
+      return { ...ipLocation, approximate: true };
     }
   } catch (error) {
     console.warn('IP geolocation failed:', error);
@@ -304,4 +318,12 @@ async function getLocationFromIP(): Promise<{
       lng: 0,
     };
   }
+}
+
+/**
+ * May a saved place answer this request? A network guess is fine for "roughly where are they", but not
+ * when the device's own position was asked for (that is what makes a thought land in the right city).
+ */
+export function cacheServes(cached: { approximate?: boolean } | null, preferBrowser: boolean): boolean {
+  return !!cached && !(preferBrowser && cached.approximate);
 }

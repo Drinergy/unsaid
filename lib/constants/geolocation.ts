@@ -122,6 +122,8 @@ export interface GeoLocation {
   countryCode?: string;
   accuracy?: number;
   isBlurred: boolean;
+  /** A guess from the network (IP), not the device's own position: may be in the wrong city */
+  approximate?: boolean;
   timestamp?: number;
 }
 

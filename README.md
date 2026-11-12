@@ -88,7 +88,7 @@ types/          shared TypeScript types
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
 - **Client IP** comes from platform headers (`x-vercel-forwarded-for`, `x-real-ip`) or the last `x-forwarded-for` hop. In `next dev` there is no proxy, so everyone shares one IP.
 
-- **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. If the user denies location, the browser asks ipapi.co for an approximate place from their IP. The posting forms load Cloudflare Turnstile (the bot check), so Cloudflare sees the visitor's IP when a form opens.
+- **Third parties**: reverse geocoding sends the already-blurred coordinates to OpenStreetMap Nominatim. When someone enters the map, the browser asks ipapi.co for an approximate place from their IP (no permission prompt). The exact position is only asked from the device when someone shares a thought. The posting forms load Cloudflare Turnstile (the bot check), so Cloudflare sees the visitor's IP when a form opens.
 
 ## Running on free tiers (spam and traffic spikes)
 

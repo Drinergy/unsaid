@@ -310,3 +310,16 @@ describe('scroll intent (scroll-intent.ts)', () => {
     expect(keyGoesDown('a')).toBe(false);
   });
 });
+
+describe('saved place (cacheServes in location.ts)', () => {
+  it('lets a network guess answer a rough request, but never a request for the device position', async () => {
+    const { cacheServes } = await import('../location');
+    const guess = { approximate: true };
+    const exact = {};
+    expect(cacheServes(null, false)).toBe(false); // nothing saved
+    expect(cacheServes(guess, false)).toBe(true); // roughly where: fine
+    expect(cacheServes(guess, true)).toBe(false); // exact asked: do not hand back the guess
+    expect(cacheServes(exact, true)).toBe(true); // a real device position serves both
+    expect(cacheServes(exact, false)).toBe(true);
+  });
+});
