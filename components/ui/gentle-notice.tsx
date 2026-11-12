@@ -1,5 +1,6 @@
 /**
- * A small card that appears after someone shares a thought or a reply: a quiet "it's out there now".
+ * A small card that appears after someone shares a thought or a reply: a quiet "it's out there now",
+ * and for a thought, a reminder that they are not alone (said to everyone, assuming nothing about them).
  */
 
 'use client';
@@ -36,9 +37,16 @@ export default function GentleNotice(): React.ReactElement | null {
     >
       <div className="flex items-start gap-3">
         <span className="light-dot mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full" aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-sm leading-relaxed text-gray-200">
-          {notice.kind === 'thought' ? COPY.sharedThought : COPY.sentReply}
-        </p>
+        <div className="min-w-0 flex-1 text-sm leading-relaxed text-gray-200">
+          {notice.kind === 'thought' ? (
+            <>
+              <p className="font-serif text-base text-gray-100">{COPY.notAlone}</p>
+              <p className="mt-0.5">{COPY.sharedThought}</p>
+            </>
+          ) : (
+            <p>{COPY.sentReply}</p>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => setNotice(null)}

@@ -82,6 +82,7 @@ export const COPY = {
   botCheckFailed: 'The check could not load. Turn off content blockers for this site and reload the page.',
 
   // After sharing
+  notAlone: "You're not alone.",
   sharedThought: 'Your thought is out there now. Someone may find it right when they need it.',
   sentReply: 'Your reply was sent. Thank you for being kind.',
   dismiss: 'Close',
