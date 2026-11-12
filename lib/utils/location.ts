@@ -15,6 +15,7 @@ import {
   REVERSE_GEOCODE_API,
   API_USER_AGENT,
 } from '@/lib/constants/geolocation';
+import { COPY } from '@/lib/copy';
 
 /**
  * Round coordinates to nearest ~100m grid (~100m precision)
@@ -250,7 +251,7 @@ export async function getUserLocation(preferBrowser: boolean = false): Promise<{
   }
 
   // If both fail, reject
-  throw new Error('Location detection failed. Please allow location access for accurate detection.');
+  throw new Error(COPY.couldNotFindPlace);
 }
 
 /**

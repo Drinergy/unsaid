@@ -4,12 +4,13 @@
  */
 
 import { NextResponse } from 'next/server';
+import { COPY } from '@/lib/copy';
 
 /** A response to send when posting is paused, or null when it is not. */
 export function pausedResponse(): NextResponse | null {
   if (process.env.POSTING_PAUSED !== '1') return null;
   return NextResponse.json(
-    { error: 'New thoughts are paused for a short while. Please try again later.' },
+    { error: COPY.paused },
     { status: 503, headers: { 'Retry-After': '600' } }
   );
 }

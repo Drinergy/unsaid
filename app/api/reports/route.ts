@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase/server';
 import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
+import { COPY } from '@/lib/copy';
 
 const REPORTS_PER_HOUR_PER_IP = 20;
 
@@ -26,16 +27,16 @@ export async function POST(request: NextRequest) {
 
     const deviceId = hashDeviceId(body.deviceId);
     if (!deviceId) {
-      return NextResponse.json({ error: 'Invalid device id' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     if (reason != null && (typeof reason !== 'string' || reason.length > 500)) {
-      return NextResponse.json({ error: 'Reason must be 500 characters or fewer' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
 
     // Validate that exactly one target is provided
     if ((!unsaidId && !replyId) || (unsaidId && replyId)) {
       return NextResponse.json(
-        { error: 'Must provide either unsaidId or replyId, not both' },
+        { error: COPY.badRequest },
         { status: 400 }
       );
     }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       .eq('ip_address', ipAddress)
       .gte('created_at', new Date(Date.now() - 3_600_000).toISOString());
     if ((recentReports ?? 0) >= REPORTS_PER_HOUR_PER_IP) {
-      return NextResponse.json({ error: 'Too many reports. Please slow down.' }, { status: 429 });
+      return NextResponse.json({ error: COPY.slowDown }, { status: 429 });
     }
 
     // Verify target exists
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (unsaidError || !unsaid) {
-        return NextResponse.json({ error: 'Unsaid not found' }, { status: 404 });
+        return NextResponse.json({ error: COPY.thoughtGone }, { status: 404 });
       }
     }
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (replyError || !reply) {
-        return NextResponse.json({ error: 'Reply not found' }, { status: 404 });
+        return NextResponse.json({ error: COPY.replyGone }, { status: 404 });
       }
     }
 
@@ -90,12 +91,12 @@ export async function POST(request: NextRequest) {
     // 23505 = this IP (or device) already reported this target; treat as success, count stays at one
     if (insertError && insertError.code !== '23505') {
       console.error('Error creating report:', insertError);
-      return NextResponse.json({ error: 'Failed to create report' }, { status: 500 });
+      return NextResponse.json({ error: COPY.couldNotReport }, { status: 500 });
     }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
     console.error('Unexpected error in POST /api/reports:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: COPY.ourSide }, { status: 500 });
   }
 }

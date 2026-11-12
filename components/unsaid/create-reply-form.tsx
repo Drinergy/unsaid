@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { CreateReplyInput } from '@/types/unsaid';
 import { validateReply } from '@/lib/utils/content-validation';
 import LightAvatar from './light-avatar';
+import { COPY } from '@/lib/copy';
 import TurnstileField, { TURNSTILE_ENABLED } from '@/components/ui/turnstile-field';
 
 interface CreateReplyFormProps {
@@ -58,7 +59,7 @@ export default function CreateReplyForm({
     setError(null);
     const validation = validateReply(content);
     if (!validation.valid) {
-      setError(validation.error || 'Invalid content');
+      setError(validation.error || COPY.emptyContent);
       return;
     }
     setSubmitting(true);
@@ -66,7 +67,7 @@ export default function CreateReplyForm({
       await onSubmit({ unsaidId, parentReplyId, content: content.trim(), turnstileToken: token ?? undefined });
       setContent('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create reply');
+      setError(err instanceof Error ? err.message : COPY.couldNotReply);
     } finally {
       setSubmitting(false);
       setResetSignal((n) => n + 1); // a token works once
@@ -107,7 +108,7 @@ export default function CreateReplyForm({
           rows={1}
           maxLength={MAX_LENGTH}
           disabled={submitting}
-          placeholder={replyingToPreview ? 'Write a reply…' : 'Reply to this thought…'}
+          placeholder={COPY.replyPlaceholder}
           aria-label="Reply"
           className="w-full resize-none bg-transparent py-1.5 text-[15px] text-gray-100 placeholder:text-gray-500 focus:outline-none"
         />
@@ -121,7 +122,7 @@ export default function CreateReplyForm({
           disabled={submitting || !content.trim() || (TURNSTILE_ENABLED && !token)}
           className="h-9 rounded-full px-3 text-sm font-semibold text-[rgb(255,214,170)] transition-colors hover:text-white disabled:text-gray-600 disabled:hover:text-gray-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
         >
-          {submitting ? 'Posting…' : 'Post'}
+          {submitting ? COPY.replying : COPY.replyButton}
         </button>
       </div>
     </form>

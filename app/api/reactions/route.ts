@@ -8,6 +8,7 @@ import { hashDeviceId, hashRequestIp } from '@/lib/utils/request-identity';
 import { getReactionCounts, REACTION_TYPES } from '@/lib/utils/reaction-counts';
 import { allowBurst } from '@/lib/utils/burst-limit';
 import { pausedResponse } from '@/lib/utils/kill-switch';
+import { COPY } from '@/lib/copy';
 import type { ReactionType } from '@/types/unsaid';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -29,17 +30,17 @@ export async function POST(request: NextRequest) {
 
     const deviceId = hashDeviceId(body.deviceId);
     if (!deviceId) {
-      return NextResponse.json({ error: 'Invalid device id' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     if (typeof unsaidId !== 'string' || !UUID_RE.test(unsaidId)) {
-      return NextResponse.json({ error: 'Invalid thought id' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
     if (type !== null && !REACTION_TYPES.includes(type)) {
-      return NextResponse.json({ error: 'Invalid reaction' }, { status: 400 });
+      return NextResponse.json({ error: COPY.badRequest }, { status: 400 });
     }
 
     if (!allowBurst(`reaction:${hashRequestIp(request)}`, REACTION_CALLS_PER_MINUTE_PER_IP, 60_000)) {
-      return NextResponse.json({ error: 'Too many reactions. Please slow down.' }, { status: 429 });
+      return NextResponse.json({ error: COPY.slowDown }, { status: 429 });
     }
 
     // Only visible thoughts can be reacted to
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       .eq('is_shadow_banned', false)
       .maybeSingle();
     if (!unsaid) {
-      return NextResponse.json({ error: 'Unsaid not found' }, { status: 404 });
+      return NextResponse.json({ error: COPY.thoughtGone }, { status: 404 });
     }
 
     if (type === null) {
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
           .eq('ip_address', ipAddress)
           .gte('created_at', since);
         if ((count ?? 0) >= NEW_REACTIONS_PER_HOUR_PER_IP) {
-          return NextResponse.json({ error: 'Too many reactions. Please slow down.' }, { status: 429 });
+          return NextResponse.json({ error: COPY.slowDown }, { status: 429 });
         }
       }
 
@@ -96,6 +97,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ counts, mine: type });
   } catch (error) {
     console.error('Unexpected error in POST /api/reactions:', error);
-    return NextResponse.json({ error: 'Failed to save reaction' }, { status: 500 });
+    return NextResponse.json({ error: COPY.couldNotReact }, { status: 500 });
   }
 }

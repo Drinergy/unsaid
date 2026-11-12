@@ -6,6 +6,8 @@
  * @created 2026-01-23
  */
 
+import { COPY } from '@/lib/copy';
+
 // Basic list of obvious violations (expand as needed)
 const BLOCKED_KEYWORDS: string[] = [
   // Add specific blocked terms here
@@ -53,17 +55,17 @@ export function checkContentFilter(content: string): { blocked: boolean; reason?
     if (lowerContent.includes(keyword.toLowerCase())) {
       return {
         blocked: true,
-        reason: 'Content contains inappropriate language',
+        reason: COPY.rephrase,
       };
     }
   }
 
   if (LINK_PATTERNS.some((p) => p.test(content)) || CONTACT_PATTERNS.some((p) => p.test(content))) {
-    return { blocked: true, reason: 'Content contains links or contact information' };
+    return { blocked: true, reason: COPY.linksNotAllowed };
   }
 
   if (SPAM_PATTERNS.some((p) => p.test(content))) {
-    return { blocked: true, reason: 'Content looks like spam' };
+    return { blocked: true, reason: COPY.looksRepeated };
   }
 
   return { blocked: false };
