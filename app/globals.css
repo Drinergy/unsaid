@@ -77,42 +77,72 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Leaflet CircleMarker glow (SVG path): a near-white core with a warm halo, like a street light at night.
-   The halo is a stack of drop-shadows (tight and bright, then wide and soft). */
-.unsaid-dot {
-  filter:
-    drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8))
-    drop-shadow(0 0 6px rgba(255, 180, 100, 0.55))
-    drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
-  transition: opacity 0.3s ease-in-out;
+/* The light: a warm cream core with a wide, soft, orange halo that fades smoothly into the dark, like a street
+   light or a lantern at night. The halo is box-shadow on a plain HTML circle (SVG shapes with CSS filters are
+   not drawn in Safari). */
+.light-dot {
+  /* Small dots in the interface (status pill, avatars): the same look, scaled down */
+  background: radial-gradient(circle, #fff8e6 0%, #ffe9bd 60%, #ffd699 100%);
+  box-shadow:
+    0 0 3px rgba(255, 214, 150, 0.9),
+    0 0 8px 2px rgba(255, 170, 90, 0.5),
+    0 0 16px 4px rgba(255, 140, 60, 0.25);
+}
+/* The map's markers (HTML icons made in unsaid-markers.tsx). Sizes are in em, and the icon sets its font-size to
+   its own width, so the halo is the same shape on a small dot and on a big cluster. */
+.light-marker-box {
+  display: grid;
+  place-items: center;
+  background: none;
+  border: none;
+}
+.light-marker {
+  --glow:
+    0 0 0.45em 0.08em rgba(255, 214, 150, 0.9),
+    0 0 1.2em 0.3em rgba(255, 170, 90, 0.55),
+    0 0 2.6em 0.75em rgba(255, 140, 60, 0.28),
+    0 0 4.6em 1.4em rgba(255, 120, 40, 0.12);
+  display: block;
+  border-radius: 9999px;
+  background: radial-gradient(circle, #fff8e6 0%, #ffe9bd 60%, #ffd699 100%);
+  box-shadow: var(--glow);
+  opacity: var(--o, 1);
+  animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
 }
 /* Older thoughts burn dimmer */
-.unsaid-dot--dim {
-  filter:
-    drop-shadow(0 0 1px rgba(255, 236, 200, 0.5))
-    drop-shadow(0 0 4px rgba(255, 180, 100, 0.3))
-    drop-shadow(0 0 9px rgba(255, 150, 70, 0.15));
-}
-/* The same light as a map marker, for dots in the UI (status pill, avatars): near-white core, amber ring, warm halo */
-.light-dot {
-  background: rgb(255, 244, 227);
-  border: 1.5px solid rgba(255, 190, 120, 0.9);
-  box-shadow:
-    0 0 1.5px rgba(255, 236, 200, 0.8),
-    0 0 6px rgba(255, 180, 100, 0.55),
-    0 0 14px rgba(255, 150, 70, 0.28);
+.light-marker--dim {
+  --glow:
+    0 0 0.4em 0.05em rgba(255, 214, 150, 0.55),
+    0 0 1em 0.2em rgba(255, 170, 90, 0.3),
+    0 0 2.2em 0.5em rgba(255, 140, 60, 0.14),
+    0 0 3.8em 1em rgba(255, 120, 40, 0.06);
 }
 
-/* A thought that was just shared: its light arrives slowly (glow grows from nothing), then breathes like the rest */
+/* A thought that was just shared: its light arrives slowly (the halo grows from nothing), then breathes like the rest */
 @keyframes light-arrive {
   0% {
     opacity: 0;
-    filter: drop-shadow(0 0 0 rgba(255, 236, 200, 0)) drop-shadow(0 0 0 rgba(255, 180, 100, 0)) drop-shadow(0 0 0 rgba(255, 150, 70, 0));
+    box-shadow:
+      0 0 0 0 rgba(255, 214, 150, 0),
+      0 0 0 0 rgba(255, 170, 90, 0),
+      0 0 0 0 rgba(255, 140, 60, 0),
+      0 0 0 0 rgba(255, 120, 40, 0);
   }
   100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 1.5px rgba(255, 236, 200, 0.8)) drop-shadow(0 0 6px rgba(255, 180, 100, 0.55)) drop-shadow(0 0 14px rgba(255, 150, 70, 0.28));
+    opacity: var(--o, 1);
+    box-shadow: var(--glow);
   }
+}
+.light-marker.light-marker--new {
+  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
+}
+/* Hide the lights while the map zooms (the .is-zooming class is set in leaflet-map.tsx), fade back after */
+.light-marker-box {
+  transition: opacity 0.25s ease-out;
+}
+.is-zooming .light-marker-box {
+  opacity: 0;
+  transition: opacity 0.1s ease-in;
 }
 /* Soft rings spreading out from it (HTML marker, so transform and opacity can animate) */
 .unsaid-ripple span {
@@ -140,13 +170,11 @@
 
 /* A slow breathing flicker (opacity only: cheap, and no layout or transform side effects) */
 @keyframes glow-breathe {
-  0%, 100% { opacity: 0.82; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: calc(var(--o, 1) * 0.82); }
+  50% { opacity: var(--o, 1); }
 }
 
-/* Fade-in animation for markers */
-/* Opacity only: a transform on an SVG circle scales it from the map origin,
-   which made markers grow and slide whenever they re-rendered on zoom. */
+/* Fade-in for markers and cards (opacity only) */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -154,17 +182,6 @@
   to {
     opacity: 1;
   }
-}
-
-.marker-fade-in {
-  animation: fadeIn 0.5s ease-out;
-}
-.unsaid-dot.marker-fade-in {
-  animation: fadeIn 0.5s ease-out, glow-breathe 3.4s ease-in-out 0.5s infinite;
-}
-/* A thought just shared: three classes, so it beats the rule above (same strength would lose by order) */
-.unsaid-dot.marker-fade-in.unsaid-dot--new {
-  animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
 
 /* Map loading: rings search outward from a light, the caption breathes */
@@ -233,8 +250,8 @@
 
 /* Accessibility: High contrast mode */
 @media (prefers-contrast: high) {
-  .unsaid-dot {
-    filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.8));
+  .light-marker {
+    --glow: 0 0 0.8em 0.2em rgba(255, 255, 255, 0.8);
   }
   
   .bg-gray-900 {
@@ -249,10 +266,8 @@
 /* Accessibility: Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .glow-light,
-  .unsaid-dot,
-  .marker-fade-in,
-  .unsaid-dot.marker-fade-in,
-  .unsaid-dot.marker-fade-in.unsaid-dot--new,
+  .light-marker,
+  .light-marker.light-marker--new,
   .search-ring,
   .breathe,
   .bounce-soft,
@@ -314,15 +329,6 @@ select:focus-visible {
 /* Fallback OpenStreetMap tiles are a light map: invert them into a dark one */
 .tiles-dark {
   filter: invert(1) hue-rotate(180deg) brightness(0.8) contrast(0.9) saturate(0.4);
-}
-
-/* Hide markers while zooming (Leaflet scales the SVG layer mid-zoom), fade back after */
-.leaflet-overlay-pane {
-  transition: opacity 0.25s ease-out;
-}
-.is-zooming .leaflet-overlay-pane {
-  opacity: 0;
-  transition: opacity 0.1s ease-in;
 }
 
 /* Popup that lists several thoughts sharing one spot */
