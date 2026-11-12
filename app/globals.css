@@ -136,6 +136,14 @@
 .light-marker.light-marker--new {
   animation: light-arrive 3s ease-out, glow-breathe 3.4s ease-in-out 3s infinite;
 }
+/* Hide the lights while the map zooms (the .is-zooming class is set in leaflet-map.tsx), fade back after */
+.light-marker-box {
+  transition: opacity 0.25s ease-out;
+}
+.is-zooming .light-marker-box {
+  opacity: 0;
+  transition: opacity 0.1s ease-in;
+}
 /* Soft rings spreading out from it (HTML marker, so transform and opacity can animate) */
 .unsaid-ripple span {
   position: absolute;
