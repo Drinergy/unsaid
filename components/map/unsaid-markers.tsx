@@ -168,10 +168,10 @@ export default function UnsaidMarkers({
             radius={clusterRadius(cluster.count)}
             pathOptions={{
               className: 'unsaid-dot marker-fade-in',
-              color: 'rgba(255, 214, 170, 0.7)',
+              color: 'rgba(255, 190, 120, 0.9)',
               weight: 2,
-              fillColor: 'rgba(255, 214, 170, 0.9)',
-              fillOpacity: 0.9,
+              fillColor: 'rgb(255, 244, 227)',
+              fillOpacity: 0.96,
             }}
             // A "cluster" of one is just a thought: zoom to it and open it, like in the close-up view
             onClick={() => (cluster.count === 1 && cluster.thoughts[0] ? handleNodeClick(cluster.thoughts[0]) : handleClusterClick(cluster))}
@@ -210,11 +210,11 @@ export default function UnsaidMarkers({
               center={[center.lat, center.lng]}
               radius={Math.min(7 + group.length, 16)}
               pathOptions={{
-                className: 'unsaid-dot',
-                color: 'rgba(255, 214, 170, 0.7)',
+                className: 'unsaid-dot marker-fade-in',
+                color: 'rgba(255, 190, 120, 0.9)',
                 weight: 2,
-                fillColor: 'rgba(255, 214, 170, 0.9)',
-                fillOpacity: 0.9,
+                fillColor: 'rgb(255, 244, 227)',
+                fillOpacity: 0.96,
               }}
               onClick={(e) => {
                 e.target.closeTooltip?.(); // else the hover tooltip covers the popup
@@ -246,13 +246,13 @@ export default function UnsaidMarkers({
             key={unsaid.id}
             coarse={coarse}
             center={[unsaid.location.lat, unsaid.location.lng]}
-            radius={age.isRecent ? 5 : 4}
+            radius={age.isRecent ? 6 : 5}
             pathOptions={{
-              className: 'unsaid-dot marker-fade-in',
-              color: `rgba(255, 214, 170, ${0.55 * opacity})`,
-              weight: 1,
-              fillColor: `rgba(255, 214, 170, ${0.95 * opacity})`,
-              fillOpacity: 0.95 * opacity,
+              className: `unsaid-dot marker-fade-in${opacity < 0.6 ? ' unsaid-dot--dim' : ''}`,
+              color: `rgba(255, 190, 120, ${0.9 * opacity})`,
+              weight: 1.5,
+              fillColor: 'rgb(255, 244, 227)',
+              fillOpacity: Math.min(1, 0.4 + 0.6 * opacity),
             }}
             onClick={() => handleNodeClick(unsaid)}
             tooltip={<div>{previewText}</div>}
