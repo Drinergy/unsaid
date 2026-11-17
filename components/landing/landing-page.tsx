@@ -84,7 +84,10 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
   }, [enter]);
 
   return (
-    <div className="w-full h-dvh bg-black flex items-center justify-center relative overflow-hidden pb-28">
+    <div
+      className="w-full h-dvh bg-black flex items-center justify-center relative overflow-hidden pb-28 cursor-pointer"
+      onClick={() => void enter()}
+    >
       {/* A flat picture of the world with a few glowing dots (decoration, not real thoughts). It is a static
           file, so people who only look at this page use none of the free map-tile quota. */}
       <Image src="/landing-map.svg" alt="" fill priority unoptimized className="object-cover opacity-60" />
@@ -112,20 +115,21 @@ export default function LandingPage({ onEnterStart, onEnterMap }: LandingPagePro
         <p className="text-xs text-gray-500 mt-2">{COPY.landingLocationNote}</p>
       </div>
 
-      {/* The way on, at the bottom edge where scroll cues belong, apart from the text: a ring (like the logo)
-          with a bouncing arrow in it. A real button, so keyboards and screen readers can use it; scrolling
-          and swiping work too. */}
+      {/* The way on, at the bottom edge where scroll cues belong, apart from the text: the familiar mouse-scroll
+          icon, its dot sliding down. A real button, so keyboards and screen readers can use it; scrolling,
+          swiping and tapping anywhere work too. */}
       <button
         type="button"
-        onClick={() => void enter()}
-        className="group absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 rounded-2xl px-6 py-2 text-[rgb(255,214,170)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
+        onClick={(e) => {
+          e.stopPropagation();
+          void enter();
+        }}
+        className="absolute bottom-[max(1.25rem,env(safe-area-inset-bottom))] left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3 rounded-2xl px-6 py-2 text-[rgb(255,214,170)]/85 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[rgb(255,214,170)]"
         aria-label={COPY.landingDiscover}
       >
-        <span className="text-base tracking-wide">{COPY.landingDiscover}</span>
-        <span className="cue-ring grid h-12 w-12 place-items-center rounded-full border border-[rgba(255,190,120,0.7)] transition-colors group-hover:border-[rgb(255,214,170)]">
-          <svg className="bounce-soft h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M6 9l6 6 6-6" />
-          </svg>
+        <span className="text-xs tracking-[0.12em]">{COPY.landingDiscover}</span>
+        <span className="mouse-cue relative block h-11 w-7 rounded-full border-2 border-[rgba(255,190,120,0.8)]" aria-hidden="true">
+          <span className="mouse-dot absolute left-1/2 top-2 h-2 w-1 -translate-x-1/2 rounded-full bg-[rgb(255,214,170)]" />
         </span>
       </button>
 
