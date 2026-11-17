@@ -203,29 +203,17 @@
   animation: search-ring 3.6s ease-out infinite;
 }
 .breathe { animation: glow-breathe 2.4s ease-in-out infinite; }
-/* The way on, on the landing page: a glowing ring with a ring of light spreading out of it, and a bouncing arrow */
-.cue-ring {
-  position: relative;
-  box-shadow: 0 0 18px rgba(255, 170, 90, 0.3), inset 0 0 12px rgba(255, 170, 90, 0.12);
+/* The way on, on the landing page: the mouse-scroll icon, glowing, its dot sliding down and fading */
+.mouse-cue {
+  box-shadow: 0 0 18px rgba(255, 170, 90, 0.28), inset 0 0 10px rgba(255, 170, 90, 0.1);
 }
-.cue-ring::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 9999px;
-  border: 1px solid rgba(255, 190, 120, 0.6);
-  animation: cue-pulse 2.4s ease-out infinite;
+@keyframes mouse-scroll {
+  0% { transform: translate(-50%, 0); opacity: 0; }
+  20% { opacity: 1; }
+  70% { transform: translate(-50%, 14px); opacity: 1; }
+  100% { transform: translate(-50%, 18px); opacity: 0; }
 }
-@keyframes cue-pulse {
-  0% { transform: scale(1); opacity: 0.7; }
-  100% { transform: scale(1.9); opacity: 0; }
-}
-/* The arrow on the landing page: a slow, gentle bounce */
-@keyframes bounce-soft {
-  0%, 100% { transform: translateY(0); opacity: 0.55; }
-  50% { transform: translateY(8px); opacity: 1; }
-}
-.bounce-soft { animation: bounce-soft 1.8s ease-in-out infinite; }
+.mouse-dot { animation: mouse-scroll 1.8s ease-in-out infinite; }
 
 /* Loading skeleton */
 @keyframes skeleton-loading {
@@ -270,8 +258,7 @@
   .light-marker.light-marker--new,
   .search-ring,
   .breathe,
-  .bounce-soft,
-  .cue-ring::after,
+  .mouse-dot,
   .rise-in {
     animation: none;
   }
