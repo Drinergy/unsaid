@@ -46,11 +46,7 @@ npm run dev                        # http://localhost:3000
 
 In the Supabase SQL editor, run `supabase/migrations/001_schema.sql` (the whole schema, in one file). A later change to the schema goes in a new file there (`002_<what>.sql`, then `003_...`), never an edit to `001`.
 
-Then turn on realtime:
-
-```sql
-alter publication supabase_realtime add table unsaids, replies;
-```
+That file also turns on Realtime (live updates), so nothing else is needed.
 
 After any change to the schema, check what the public key can do (it is in every visitor's browser, so it must hold no write privilege):
 
@@ -58,7 +54,7 @@ After any change to the schema, check what the public key can do (it is in every
 node --env-file=.env.local scripts/check-anon-access.mjs
 ```
 
-Why PostGIS is installed in the `extensions` schema and not `public`: Supabase's security advisor flagged `rls_disabled_in_public`. PostGIS's own `spatial_ref_sys` table sat in `public`, and the public key could read, delete from and update it. The extension owns that table, so it cannot be locked down; in `extensions` the API does not expose it. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then `001_schema.sql`, then the realtime statement above. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
+Why PostGIS is installed in the `extensions` schema and not `public`: Supabase's security advisor flagged `rls_disabled_in_public`. PostGIS's own `spatial_ref_sys` table sat in `public`, and the public key could read, delete from and update it. The extension owns that table, so it cannot be locked down; in `extensions` the API does not expose it. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then `001_schema.sql`. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
 
 ## Scripts
 
@@ -115,7 +111,7 @@ types/          shared TypeScript types
 
 - **Blank or grey map**: `NEXT_PUBLIC_MAPTILER_KEY` is missing or restricted to another domain.
 - **Writes fail**: check `SUPABASE_SERVICE_ROLE_KEY` and `ID_HASH_SECRET` are set.
-- **No live updates**: run the realtime `alter publication` statement above.
+- **No live updates**: run the last part of `supabase/migrations/001_schema.sql` (the Realtime block) again; it is safe to run twice.
 - **Blocked when testing locally**: the 30 s throttle and daily limits apply to you too.
 
 ## License

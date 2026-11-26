@@ -1,5 +1,5 @@
 -- Baseline: the whole schema in one file, squashed from the earlier migrations 001 to 011 (their history is in
--- git). Run this once on a fresh database, then: alter publication supabase_realtime add table unsaids, replies;
+-- git). Run this once on a fresh database. It is the whole setup, including the Realtime publication at the end.
 -- A later change to the schema goes in a NEW file, 002_<what>.sql, then 003_..., and so on. Never edit this one
 -- once a database has been built from it.
 --
@@ -598,3 +598,24 @@ REVOKE ALL ON TABLE public.reports, public.reactions FROM anon, authenticated;
 -- 2. Tables made later in public should not be open to the public key by default (Supabase grants it unless told
 --    otherwise). A new table that the browser must read needs its own explicit GRANT SELECT and a policy.
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+
+-- ================================================================
+-- Part 11: Realtime (live updates for new thoughts and replies)
+-- ================================================================
+-- Added to Supabase's own "supabase_realtime" publication. Written so it can run twice: a plain
+-- ALTER PUBLICATION ... ADD TABLE fails when the table is already in it, and skipping it quietly keeps this file
+-- usable on a Postgres that has no such publication.
+DO $$
+DECLARE
+  t text;
+BEGIN
+  IF EXISTS (SELECT 1 FROM pg_publication WHERE pubname = 'supabase_realtime') THEN
+    FOREACH t IN ARRAY ARRAY['unsaids', 'replies'] LOOP
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND schemaname = 'public' AND tablename = t
+      ) THEN
+        EXECUTE format('ALTER PUBLICATION supabase_realtime ADD TABLE public.%I', t);
+      END IF;
+    END LOOP;
+  END IF;
+END $$;
