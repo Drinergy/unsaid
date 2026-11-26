@@ -46,13 +46,22 @@ npm run dev                        # http://localhost:3000
 
 In the Supabase SQL editor, run the files in `supabase/migrations/` in this order (there is no `002`):
 
-`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth` → `010_hide_private_columns`
+`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth` → `010_hide_private_columns` → `011_lock_public_key_out`
 
 Then turn on realtime:
 
 ```sql
 alter publication supabase_realtime add table unsaids, replies;
 ```
+
+After any migration, check what the public key can do (it is in every visitor's browser, so it must hold no write privilege):
+
+```bash
+node --env-file=.env.local scripts/check-anon-access.mjs
+```
+
+Migration 011 answers Supabase's `rls_disabled_in_public` warning. The table behind it is PostGIS's own `spatial_ref_sys`, which the public key could read, delete from and update. If 011 prints a `NOTICE ... must be owner` for that table, the extension owns it and Postgres refused: ask Supabase support to revoke the public key's access on it, or, on an empty database only, reinstall PostGIS in the `extensions` schema (this drops the geography columns, so rerun 001 to 011 afterwards).
+
 
 ## Scripts
 
@@ -82,7 +91,7 @@ types/          shared TypeScript types
 
 - **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
 - **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP; migration 010).
-- **Writes**: the public key cannot write. Row-level security has no write policies; every write goes through the API using the server-only service key.
+- **Writes**: the public key holds no write privilege on any table (migration 011), on top of row level security having no write policies. Row-level security has no write policies; every write goes through the API using the server-only service key.
 - **Bot check**: new thoughts and replies need a Cloudflare Turnstile token (checked on the server before the database is touched).
 - **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
