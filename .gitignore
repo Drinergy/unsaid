@@ -44,3 +44,6 @@ docs/agents/
 
 # promotional video project (Remotion), kept out of this repo
 video/
+
+# one-off SQL built for pasting into the Supabase editor
+*.tmp.sql

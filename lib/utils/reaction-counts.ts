@@ -1,6 +1,6 @@
 /**
  * Server-side reaction helpers: counts per type for a thought, and this device's own reaction.
- * A failed lookup (e.g. migration 006 not applied yet) returns zeros so the thought still loads.
+ * A failed lookup (e.g. the reactions part of the schema not applied yet) returns zeros so the thought still loads.
  */
 
 import { supabaseAdmin } from '@/lib/supabase/server';
