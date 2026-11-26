@@ -1,5 +1,5 @@
 -- DESTROYS ALL DATA. Wipes the app's tables and functions, and reinstalls PostGIS in the `extensions` schema
--- (migration 001 does the same on a fresh database). Run this, then run the migrations 001 to 011 in order, then
+-- (001_schema.sql does the same on a fresh database). Run this, then run supabase/migrations/001_schema.sql, then
 --   alter publication supabase_realtime add table unsaids, replies;
 --
 -- Why: PostGIS used to live in the public schema, where its own table spatial_ref_sys was open to the public API

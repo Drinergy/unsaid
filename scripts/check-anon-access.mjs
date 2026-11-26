@@ -1,6 +1,6 @@
 // Checks what the PUBLIC key (the one every visitor's browser holds) can do to the database. It must hold no write
 // privilege on any table, and must not read any table with `select *` (the app reads only named columns of
-// unsaids and replies). Run after every migration:
+// unsaids and replies). Run after every change to the schema:
 //   node --env-file=.env.local scripts/check-anon-access.mjs
 // Writes are tried with a filter that matches no row, so nothing is ever changed. A refused write answers 401/403.
 // An answer of 204 means the key holds the privilege: with row level security on that still changes no row, but one

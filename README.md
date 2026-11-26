@@ -44,9 +44,7 @@ npm run dev                        # http://localhost:3000
 
 ### Database
 
-In the Supabase SQL editor, run the files in `supabase/migrations/` in this order (there is no `002`):
-
-`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth` → `010_hide_private_columns` → `011_lock_public_key_out`
+In the Supabase SQL editor, run `supabase/migrations/001_schema.sql` (the whole schema, in one file). A later change to the schema goes in a new file there (`002_<what>.sql`, then `003_...`), never an edit to `001`.
 
 Then turn on realtime:
 
@@ -54,14 +52,13 @@ Then turn on realtime:
 alter publication supabase_realtime add table unsaids, replies;
 ```
 
-After any migration, check what the public key can do (it is in every visitor's browser, so it must hold no write privilege):
+After any change to the schema, check what the public key can do (it is in every visitor's browser, so it must hold no write privilege):
 
 ```bash
 node --env-file=.env.local scripts/check-anon-access.mjs
 ```
 
-Migration 011 answers Supabase's `rls_disabled_in_public` warning: the public key could read, delete from and update PostGIS's own `spatial_ref_sys` table, which the extension owns and so cannot be locked down. The fix is that PostGIS lives in the `extensions` schema (migration 001 does this), which the API does not expose. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then migrations 001 to 011, then the realtime statement above. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
-
+Why PostGIS is installed in the `extensions` schema and not `public`: Supabase's security advisor flagged `rls_disabled_in_public`. PostGIS's own `spatial_ref_sys` table sat in `public`, and the public key could read, delete from and update it. The extension owns that table, so it cannot be locked down; in `extensions` the API does not expose it. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then `001_schema.sql`, then the realtime statement above. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
 
 ## Scripts
 
@@ -83,15 +80,15 @@ Every sentence people read lives in `lib/copy.ts`: warm, short, never blaming. O
 app/            Next.js routes and API (unsaids, replies, reactions, reports)
 components/     map, unsaid (thread, forms, reactions), landing, saved thoughts, ui
 lib/            hooks, supabase clients, utils (hashing, rate limits, clustering, filters)
-supabase/       SQL migrations
+supabase/       the SQL schema (one baseline file, new changes as new files)
 types/          shared TypeScript types
 ```
 
 ## How privacy and safety work
 
 - **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
-- **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP; migration 010).
-- **Writes**: the public key holds no write privilege on any table (migration 011), on top of row level security having no write policies. Row-level security has no write policies; every write goes through the API using the server-only service key.
+- **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP).
+- **Writes**: the public key holds no write privilege on any table, on top of row level security having no write policies. Row-level security has no write policies; every write goes through the API using the server-only service key.
 - **Bot check**: new thoughts and replies need a Cloudflare Turnstile token (checked on the server before the database is touched).
 - **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
