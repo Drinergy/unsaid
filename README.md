@@ -48,7 +48,7 @@ In the Supabase SQL editor, run `supabase/migrations/001_schema.sql` (the whole 
 
 That file also turns on Realtime (live updates), so nothing else is needed.
 
-After any change to the schema, check what the public key can do (it is in every visitor's browser, so it must hold no write privilege):
+After any change to the schema, check what the public key can do (it is in every visitor's browser). The script finds every table and function the API exposes and tries each one: no delete, no update, no `select *`, no function call. A new function needs its own `REVOKE EXECUTE` (see `001_schema.sql`).
 
 ```bash
 node --env-file=.env.local scripts/check-anon-access.mjs

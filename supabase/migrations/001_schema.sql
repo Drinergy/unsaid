@@ -166,6 +166,8 @@ CREATE TRIGGER increment_report_count_trigger AFTER INSERT ON reports
 
 -- ================================================================
 -- Functions the API calls with the service key (the public key may not run them)
+-- Every NEW function needs a REVOKE EXECUTE ... FROM PUBLIC, anon, authenticated like the ones below: they run with the
+-- owner's rights (SECURITY DEFINER), and without it any visitor can call them. scripts/check-anon-access.mjs checks.
 -- ================================================================
 
 -- Thoughts inside a box (the zoomed-in map)

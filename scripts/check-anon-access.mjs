@@ -1,26 +1,62 @@
-// Checks what the PUBLIC key (the one every visitor's browser holds) can do to the database. It must hold no write
-// privilege on any table, and must not read any table with `select *` (the app reads only named columns of
-// unsaids and replies). Run after every change to the schema:
+// Checks what the PUBLIC key (the one every visitor's browser holds) can do. Run it after every change to the schema:
 //   node --env-file=.env.local scripts/check-anon-access.mjs
-// Writes are tried with a filter that matches no row, so nothing is ever changed. A refused write answers 401/403.
-// An answer of 204 means the key holds the privilege: with row level security on that still changes no row, but one
-// missing policy later would be enough, so it counts as a failure here.
+//
+// It asks the API (with the service key) which tables and functions it exposes, so a new one is checked without
+// anyone remembering to add it here. Then, with the public key:
+//   * every table: no delete, no update, and no `select *` (the app reads only named columns of unsaids and replies)
+//   * every function: no call. A function runs with its owner's rights, so one that is open lets any visitor do what
+//     it does. (If one IS open, this call runs it once, with empty values, which our functions reject.)
+// A refused call answers 401 or 403. Anything else counts as a failure, including 404, which says nothing: it is
+// what a call with the wrong parameter names gets. Deletes and updates use a filter that matches no row.
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' };
-const nothing = (table) => (table === 'spatial_ref_sys' ? 'srid=eq.-999999' : 'id=eq.00000000-0000-0000-0000-000000000000');
-const call = async (method, table, query, body) => (await fetch(`${url}/rest/v1/${table}?${query}`, { method, headers, body })).status;
+const api = `${url}/rest/v1`;
+const headersFor = (key) => ({ apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' });
+const anon = headersFor(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+const service = headersFor(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-// A column of each table to try an update on (an empty update body would be answered 204 without the database being asked)
-const tables = { unsaids: 'content', replies: 'content', reports: 'reason', reactions: 'type', spatial_ref_sys: 'auth_name' };
-let failures = 0;
-for (const [table, column] of Object.entries(tables)) {
-  const del = await call('DELETE', table, nothing(table));
-  const upd = await call('PATCH', table, nothing(table), JSON.stringify({ [column]: null }));
-  const read = await call('GET', table, 'select=*&limit=1');
-  const ok = del >= 400 && upd >= 400 && read >= 400;
-  if (!ok) failures++;
-  console.log(`${ok ? 'ok  ' : 'FAIL'} ${table.padEnd(16)} delete ${del}  update ${upd}  read(select *) ${read}`);
+const spec = await (await fetch(`${api}/`, { headers: service })).json();
+const tables = Object.entries(spec.definitions ?? {});
+const functions = Object.entries(spec.paths ?? {}).filter(([path]) => path.startsWith('/rpc/'));
+if (tables.length === 0) {
+  console.error('Could not list the tables with the service key. Is SUPABASE_SERVICE_ROLE_KEY set?');
+  process.exit(2);
 }
-console.log(failures ? `\n${failures} table(s) still open to the public key.` : '\nThe public key holds no write privilege and reads nothing it should not.');
+
+const ZERO_UUID = '00000000-0000-0000-0000-000000000000';
+const isNumber = (format = '') => /int|double|numeric|real|float/.test(format);
+const refused = (status) => status === 401 || status === 403;
+const call = async (method, path, body) => (await fetch(`${api}/${path}`, { method, headers: anon, body })).status;
+
+let failures = 0;
+const report = (ok, name, detail) => {
+  if (!ok) failures++;
+  console.log(`${ok ? 'ok  ' : 'FAIL'} ${name.padEnd(28)} ${detail}`);
+};
+
+for (const [table, { properties }] of tables) {
+  const [[first, firstProp], second] = Object.entries(properties);
+  // a value of the right type for the first column that no row has, so a permitted call changes nothing
+  const nothing = firstProp.format === 'uuid' ? ZERO_UUID : isNumber(firstProp.format) ? '-999999' : 'x';
+  const filter = `${first}=eq.${nothing}`;
+  const column = (second ?? [first])[0];
+  const del = await call('DELETE', `${table}?${filter}`);
+  const upd = await call('PATCH', `${table}?${filter}`, JSON.stringify({ [column]: null }));
+  const read = await call('GET', `${table}?select=*&limit=1`);
+  report([del, upd, read].every(refused), `table ${table}`, `delete ${del}  update ${upd}  read(select *) ${read}`);
+}
+
+for (const [path, { post }] of functions) {
+  const props = post.parameters?.find((p) => p.in === 'body')?.schema?.properties ?? {};
+  const args = Object.fromEntries(
+    Object.entries(props).map(([name, { format }]) => [name, format === 'uuid' ? ZERO_UUID : isNumber(format) ? 0 : ''])
+  );
+  const status = await call('POST', path.slice(1), JSON.stringify(args));
+  report(refused(status), `function ${path.slice(5)}`, `call ${status}`);
+}
+
+console.log(
+  failures
+    ? `\n${failures} problem(s) among ${tables.length} tables and ${functions.length} functions: the public key can do something it should not.`
+    : `\nChecked ${tables.length} tables and ${functions.length} functions: the public key can write nothing, read nothing it should not, and call nothing.`
+);
 process.exit(failures ? 1 : 0);
