@@ -11,11 +11,12 @@ const headers = { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': '
 const nothing = (table) => (table === 'spatial_ref_sys' ? 'srid=eq.-999999' : 'id=eq.00000000-0000-0000-0000-000000000000');
 const call = async (method, table, query, body) => (await fetch(`${url}/rest/v1/${table}?${query}`, { method, headers, body })).status;
 
-const tables = ['unsaids', 'replies', 'reports', 'reactions', 'spatial_ref_sys'];
+// A column of each table to try an update on (an empty update body would be answered 204 without the database being asked)
+const tables = { unsaids: 'content', replies: 'content', reports: 'reason', reactions: 'type', spatial_ref_sys: 'auth_name' };
 let failures = 0;
-for (const table of tables) {
+for (const [table, column] of Object.entries(tables)) {
   const del = await call('DELETE', table, nothing(table));
-  const upd = await call('PATCH', table, nothing(table), '{}');
+  const upd = await call('PATCH', table, nothing(table), JSON.stringify({ [column]: null }));
   const read = await call('GET', table, 'select=*&limit=1');
   const ok = del >= 400 && upd >= 400 && read >= 400;
   if (!ok) failures++;
