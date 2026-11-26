@@ -44,15 +44,17 @@ npm run dev                        # http://localhost:3000
 
 ### Database
 
-In the Supabase SQL editor, run the files in `supabase/migrations/` in this order (there is no `002`):
+In the Supabase SQL editor, run `supabase/migrations/001_schema.sql` (the whole schema, in one file). A later change to the schema goes in a new file there (`002_<what>.sql`, then `003_...`), never an edit to `001`.
 
-`001_initial_schema` → `003_spatial_functions` → `004_security_hardening` → `005_cluster_function` → `006_reactions` → `007_reaction_types` → `008_reply_location` → `009_report_ips_and_reply_depth` → `010_hide_private_columns`
+That file also turns on Realtime (live updates), so nothing else is needed.
 
-Then turn on realtime:
+After any change to the schema, check what the public key can do (it is in every visitor's browser). The script finds every table and function the API exposes and tries each one: no delete, no update, no `select *`, no function call. A new function needs its own `REVOKE EXECUTE` (see `001_schema.sql`).
 
-```sql
-alter publication supabase_realtime add table unsaids, replies;
+```bash
+node --env-file=.env.local scripts/check-anon-access.mjs
 ```
+
+Why PostGIS is installed in the `extensions` schema and not `public`: Supabase's security advisor flagged `rls_disabled_in_public`. PostGIS's own `spatial_ref_sys` table sat in `public`, and the public key could read, delete from and update it. The extension owns that table, so it cannot be locked down; in `extensions` the API does not expose it. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then `001_schema.sql`. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
 
 ## Scripts
 
@@ -74,15 +76,15 @@ Every sentence people read lives in `lib/copy.ts`: warm, short, never blaming. O
 app/            Next.js routes and API (unsaids, replies, reactions, reports)
 components/     map, unsaid (thread, forms, reactions), landing, saved thoughts, ui
 lib/            hooks, supabase clients, utils (hashing, rate limits, clustering, filters)
-supabase/       SQL migrations
+supabase/       the SQL schema (one baseline file, new changes as new files)
 types/          shared TypeScript types
 ```
 
 ## How privacy and safety work
 
 - **Identity**: device ID is a UUID in `localStorage`. Device ID and IP are HMAC-hashed with `ID_HASH_SECRET` before they are stored.
-- **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP; migration 010).
-- **Writes**: the public key cannot write. Row-level security has no write policies; every write goes through the API using the server-only service key.
+- **Reads**: the public key can only read the columns the app shows (not the hashed device id or IP).
+- **Writes**: the public key holds no write privilege on any table, on top of row level security having no write policies. Row-level security has no write policies; every write goes through the API using the server-only service key.
 - **Bot check**: new thoughts and replies need a Cloudflare Turnstile token (checked on the server before the database is touched).
 - **Rate limits** (counted from stored posts): 10 thoughts and 50 replies per device per 24 h, 20 posts per IP per hour, 30 s between posts.
 - **Reports**: one per IP per post, 20 per hour per IP; 3 distinct IPs hide the post.
@@ -109,7 +111,7 @@ types/          shared TypeScript types
 
 - **Blank or grey map**: `NEXT_PUBLIC_MAPTILER_KEY` is missing or restricted to another domain.
 - **Writes fail**: check `SUPABASE_SERVICE_ROLE_KEY` and `ID_HASH_SECRET` are set.
-- **No live updates**: run the realtime `alter publication` statement above.
+- **No live updates**: run the last part of `supabase/migrations/001_schema.sql` (the Realtime block) again; it is safe to run twice.
 - **Blocked when testing locally**: the 30 s throttle and daily limits apply to you too.
 
 ## License
