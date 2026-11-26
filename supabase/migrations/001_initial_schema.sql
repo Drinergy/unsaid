@@ -1,5 +1,7 @@
--- Enable PostGIS extension for spatial queries
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- PostGIS goes in the `extensions` schema, NOT public: its own tables (spatial_ref_sys) would otherwise sit in public,
+-- be reachable by the public API key, and cannot be locked down because the extension owns them (see 011).
+CREATE SCHEMA IF NOT EXISTS extensions;
+CREATE EXTENSION IF NOT EXISTS postgis WITH SCHEMA extensions;
 
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -11,7 +13,7 @@ CREATE TABLE unsaids (
     content_hash TEXT NOT NULL, -- MD5 hash for duplicate detection
     city TEXT,
     country_code CHAR(2) NOT NULL, -- ISO 3166-1 alpha-2
-    location GEOMETRY(Point, 4326) NOT NULL, -- Rounded coordinates (10km precision)
+    location extensions.GEOMETRY(Point, 4326) NOT NULL, -- Rounded coordinates (10km precision)
     device_id TEXT NOT NULL, -- Anonymous device identifier
     ip_address INET, -- For IP-based rate limiting (hashed or anonymized)
     is_shadow_banned BOOLEAN DEFAULT false NOT NULL,

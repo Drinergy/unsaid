@@ -60,7 +60,7 @@ After any migration, check what the public key can do (it is in every visitor's 
 node --env-file=.env.local scripts/check-anon-access.mjs
 ```
 
-Migration 011 answers Supabase's `rls_disabled_in_public` warning. The table behind it is PostGIS's own `spatial_ref_sys`, which the public key could read, delete from and update. If 011 prints a `NOTICE ... must be owner` for that table, the extension owns it and Postgres refused: ask Supabase support to revoke the public key's access on it, or, on an empty database only, reinstall PostGIS in the `extensions` schema (this drops the geography columns, so rerun 001 to 011 afterwards).
+Migration 011 answers Supabase's `rls_disabled_in_public` warning: the public key could read, delete from and update PostGIS's own `spatial_ref_sys` table, which the extension owns and so cannot be locked down. The fix is that PostGIS lives in the `extensions` schema (migration 001 does this), which the API does not expose. To move an existing database over (it **destroys all data**), run `supabase/reset.sql`, then migrations 001 to 011, then the realtime statement above. If `DROP EXTENSION` is refused ("must be owner"), turn PostGIS off in Dashboard → Database → Extensions, then run the last two lines of `reset.sql`.
 
 
 ## Scripts

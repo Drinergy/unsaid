@@ -27,7 +27,7 @@ RETURNS TABLE (
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = public
+SET search_path = public, extensions
 AS $$
     WITH pts AS (
         SELECT u.id, u.content, u.city, u.country_code, u.created_at,
